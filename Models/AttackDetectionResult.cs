@@ -1,4 +1,4 @@
-namespace ProxInv.Models
+namespace Reversify.Models
 {
     /// <summary>
     /// Resultado de la detección de ataques

@@ -1,10 +1,10 @@
-@page
-@model ProxInv.Pages.Admin.IndexModel
+﻿@page
+@model Reversify.Pages.Admin.IndexModel
 @{
-    ViewData["Title"] = "Panel de Administración - ProxInv";
+    ViewData["Title"] = "Panel de Administración - Reversify";
 }
 
-<!-- Admin Page con diseño moderno -->
+<!-- Admin Page con diseÃ±o moderno -->
 <section class="min-h-screen pt-24 px-4 pb-12">
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
@@ -12,12 +12,12 @@
             <div>
                 <h1 class="font-space text-4xl md:text-5xl font-bold mb-2">
                     <i class="fas fa-shield-alt mr-3 text-cyan-400"></i>
-                    <span class="gradient-text">Panel de Administración</span>
+                    <span class="gradient-text">Panel de AdministraciÃ³n</span>
                 </h1>
                 <p class="text-gray-400">Gestiona las configuraciones de proxy inversas</p>
             </div>
             <button type="button" class="btn-primary px-6 py-3 rounded-full text-white font-semibold" onclick="showCreateModal()">
-                <i class="fas fa-plus-circle mr-2"></i> Nueva Configuración
+                <i class="fas fa-plus-circle mr-2"></i> Nueva ConfiguraciÃ³n
             </button>
         </div>
 
@@ -104,11 +104,11 @@
     </div>
 </section>
 
-<!-- Modal de Crear/Editar (diseño moderno) -->
+<!-- Modal de Crear/Editar (diseÃ±o moderno) -->
 <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center" id="configModal">
     <div class="glass-strong rounded-3xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
         <div class="p-6 border-b border-white/10 flex justify-between items-center">
-            <h3 class="font-space text-2xl font-bold gradient-text" id="configModalTitle">Nueva Configuración</h3>
+            <h3 class="font-space text-2xl font-bold gradient-text" id="configModalTitle">Nueva ConfiguraciÃ³n</h3>
             <button type="button" class="text-gray-400 hover:text-white transition-colors" onclick="hideConfigModal()">
                 <i class="fas fa-times text-2xl"></i>
             </button>
@@ -125,7 +125,7 @@
                     <input type="text" 
                            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-cyan-400 transition-colors text-white" 
                            id="configName" 
-                           placeholder="Mi aplicación web"
+                           placeholder="Mi aplicaciÃ³n web"
                            required />
                 </div>
 
@@ -150,7 +150,7 @@
                            id="localUrl" 
                            placeholder="http://127.0.0.1:3000" 
                            required />
-                    <p class="text-gray-400 text-sm mt-1">Dirección local del servicio</p>
+                    <p class="text-gray-400 text-sm mt-1">DirecciÃ³n local del servicio</p>
                 </div>
 
                 <div>
@@ -162,18 +162,18 @@
                            id="certificatesDirectory"
                            placeholder="C:\Certificates" />
                     <p class="text-gray-400 text-sm mt-1">
-                        El sistema buscará automáticamente: {dnsUrl}.crt + {dnsUrl}.key o {dnsUrl}.pfx
+                        El sistema buscarÃ¡ automÃ¡ticamente: {dnsUrl}.crt + {dnsUrl}.key o {dnsUrl}.pfx
                     </p>
                 </div>
 
                 <div>
                     <label for="certificatePassword" class="block text-sm font-medium text-gray-300 mb-2">
-                        <i class="fas fa-key mr-2 text-purple-400"></i>Contraseña del Certificado (Opcional, solo .pfx)
+                        <i class="fas fa-key mr-2 text-purple-400"></i>ContraseÃ±a del Certificado (Opcional, solo .pfx)
                     </label>
                     <input type="password"
                            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-purple-400 transition-colors text-white"
                            id="certificatePassword"
-                           placeholder="••••••••" />
+                           placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
                 </div>
 
                 <div class="flex items-center space-x-3 p-4 bg-white/5 rounded-xl">
@@ -182,7 +182,7 @@
                            id="enabled" 
                            checked />
                     <label class="text-gray-300 font-medium cursor-pointer" for="enabled">
-                        <i class="fas fa-power-off mr-2 text-green-400"></i>Activar configuración
+                        <i class="fas fa-power-off mr-2 text-green-400"></i>Activar configuraciÃ³n
                     </label>
                 </div>
             </form>
@@ -203,13 +203,13 @@
     </div>
 </div>
 
-<!-- Modal de Confirmación de Eliminación (diseño moderno) -->
+<!-- Modal de ConfirmaciÃ³n de EliminaciÃ³n (diseÃ±o moderno) -->
 <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center" id="deleteModal">
     <div class="glass-strong rounded-3xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
         <div class="p-6 border-b border-white/10 bg-gradient-to-r from-red-500/20 to-pink-500/20">
             <div class="flex justify-between items-center">
                 <h3 class="font-space text-2xl font-bold text-red-400 flex items-center">
-                    <i class="fas fa-exclamation-triangle mr-3"></i>Confirmar Eliminación
+                    <i class="fas fa-exclamation-triangle mr-3"></i>Confirmar EliminaciÃ³n
                 </h3>
                 <button type="button" class="text-gray-400 hover:text-white transition-colors" onclick="hideDeleteModal()">
                     <i class="fas fa-times text-2xl"></i>
@@ -218,10 +218,10 @@
         </div>
         
         <div class="p-6">
-            <p class="text-gray-300 mb-3">¿Está seguro de que desea eliminar esta configuración?</p>
+            <p class="text-gray-300 mb-3">Â¿EstÃ¡ seguro de que desea eliminar esta configuraciÃ³n?</p>
             <p class="text-white font-bold text-lg" id="deleteConfigName"></p>
             <p class="text-red-400 text-sm mt-3">
-                <i class="fas fa-info-circle mr-2"></i>Esta acción no se puede deshacer
+                <i class="fas fa-info-circle mr-2"></i>Esta acciÃ³n no se puede deshacer
             </p>
         </div>
         
@@ -315,14 +315,14 @@
             console.log('[DEBUG] tbody encontrado:', tbody !== null);
 
             if (configs.length === 0) {
-                console.log('[DEBUG] No hay configuraciones, mostrando mensaje vacío');
+                console.log('[DEBUG] No hay configuraciones, mostrando mensaje vacÃ­o');
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="6" class="px-6 py-12 text-center">
                             <i class="fas fa-inbox text-gray-600 text-5xl mb-4"></i>
                             <p class="text-gray-400">No hay configuraciones disponibles</p>
                             <button onclick="showCreateModal()" class="btn-primary px-6 py-2 rounded-full text-white font-medium mt-4 inline-block">
-                                <i class="fas fa-plus-circle mr-2"></i>Crear primera configuración
+                                <i class="fas fa-plus-circle mr-2"></i>Crear primera configuraciÃ³n
                             </button>
                         </td>
                     </tr>`;
@@ -376,7 +376,7 @@
         }
 
         function showCreateModal() {
-            document.getElementById('configModalTitle').textContent = 'Nueva Configuración';
+            document.getElementById('configModalTitle').textContent = 'Nueva ConfiguraciÃ³n';
             document.getElementById('configForm').reset();
             document.getElementById('configId').value = '';
             document.getElementById('enabled').checked = true;
@@ -393,7 +393,7 @@
             fetch(`/api/ProxyConfig/${id}`)
                 .then(response => response.json())
                 .then(config => {
-                    document.getElementById('configModalTitle').textContent = 'Editar Configuración';
+                    document.getElementById('configModalTitle').textContent = 'Editar ConfiguraciÃ³n';
                     document.getElementById('configId').value = config.id;
                     document.getElementById('configName').value = config.name;
                     document.getElementById('dnsUrl').value = config.dnsUrl;
@@ -406,7 +406,7 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showToast('Error al cargar configuración', 'error');
+                    showToast('Error al cargar configuraciÃ³n', 'error');
                 });
         }
 
@@ -443,11 +443,11 @@
             .then(() => {
                 hideConfigModal();
                 loadConfigurations();
-                showToast(isEdit ? 'Configuración actualizada correctamente' : 'Configuración creada exitosamente', 'success');
+                showToast(isEdit ? 'ConfiguraciÃ³n actualizada correctamente' : 'ConfiguraciÃ³n creada exitosamente', 'success');
             })
             .catch(error => {
                 console.error('Error:', error);
-                showToast('Error al guardar configuración', 'error');
+                showToast('Error al guardar configuraciÃ³n', 'error');
             });
         }
 
@@ -466,7 +466,7 @@
         function confirmDelete() {
             if (!currentDeleteId) return;
 
-            console.log('[DEBUG] Eliminando configuración:', currentDeleteId);
+            console.log('[DEBUG] Eliminando configuraciÃ³n:', currentDeleteId);
             
             fetch(`/api/ProxyConfig/${currentDeleteId}`, {
                 method: 'DELETE'
@@ -482,10 +482,10 @@
                 return data;
             })
             .then((data) => {
-                console.log('[DEBUG] Configuración eliminada:', data);
+                console.log('[DEBUG] ConfiguraciÃ³n eliminada:', data);
                 hideDeleteModal();
                 loadConfigurations();
-                showToast('Configuración eliminada correctamente', 'success');
+                showToast('ConfiguraciÃ³n eliminada correctamente', 'success');
                 currentDeleteId = null;
             })
             .catch(error => {
@@ -567,3 +567,4 @@
             transition: opacity 0.3s, transform 0.3s;
         }
     </style>
+

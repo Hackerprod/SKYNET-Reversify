@@ -1,6 +1,6 @@
-using ProxInv.Modules;
-using ProxInv.Services;
-using ProxInv.Middleware;
+﻿using Reversify.Modules;
+using Reversify.Services;
+using Reversify.Middleware;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 
@@ -105,7 +105,7 @@ if (!app.Environment.IsDevelopment())
 // Redirigir HTTP -> HTTPS en el edge para evitar contenido mixto
 app.UseHttpsRedirection();
 
-// Ejecutar el proxy inverso antes de archivos est�ticos/rutas locales
+// Ejecutar el proxy inverso antes de archivos estáticos/rutas locales
 app.UseReverseProxy();
 
 app.UseStaticFiles();
@@ -126,10 +126,3 @@ app.MapControllers();
 
 Console.WriteLine("🚀 Iniciando servidor...");
 app.Run();
-
-
-
-
-
-
-

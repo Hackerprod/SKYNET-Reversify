@@ -14,7 +14,7 @@ Prereqs: .NET 8 SDK, open ports 80/443 (administrator privileges may be required
 
 ```bash
 dotnet restore
-dotnet run --project ProxInv.csproj
+dotnet run --project Reversify.csproj
 # or with hot reload
 dotnet watch run
 # Windows helpers

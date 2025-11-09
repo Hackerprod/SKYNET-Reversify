@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace ProxInv.Services
+namespace Reversify.Services
 {
     /// <summary>
     /// Servicio para cargar certificados SSL en diferentes formatos

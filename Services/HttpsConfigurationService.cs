@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography.X509Certificates;
 
-namespace ProxInv.Services
+namespace Reversify.Services
 {
     /// <summary>
     /// Servicio para gestionar certificados HTTPS por host
@@ -149,4 +149,3 @@ namespace ProxInv.Services
         }
     }
 }
-

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace ProxInv.Pages;
+namespace Reversify.Pages;
 
 public class PrivacyModel : PageModel
 {

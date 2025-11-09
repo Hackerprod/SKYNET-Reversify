@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
-using ProxInv.Models;
+using Reversify.Models;
 
-namespace ProxInv.Services
+namespace Reversify.Services
 {
     /// <summary>
     /// Servicio para gestionar la configuración de proxies desde archivos JSON

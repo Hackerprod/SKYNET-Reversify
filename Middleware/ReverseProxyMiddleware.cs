@@ -1,7 +1,7 @@
-using ProxInv.Services;
+using Reversify.Services;
 using System.Net;
 
-namespace ProxInv.Middleware
+namespace Reversify.Middleware
 {
     /// <summary>
     /// Middleware personalizado de proxy inverso

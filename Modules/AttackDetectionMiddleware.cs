@@ -1,6 +1,6 @@
-using ProxInv.Models;
+using Reversify.Models;
 
-namespace ProxInv.Modules
+namespace Reversify.Modules
 {
     /// <summary>
     /// Middleware que integra los módulos de detección de ataques

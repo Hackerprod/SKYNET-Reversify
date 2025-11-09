@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using ProxInv.Models;
-using ProxInv.Services;
+using Reversify.Models;
+using Reversify.Services;
 
-namespace ProxInv.Controllers
+namespace Reversify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

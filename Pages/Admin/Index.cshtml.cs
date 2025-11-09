@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using ProxInv.Models;
-using ProxInv.Services;
+using Reversify.Models;
+using Reversify.Services;
 
-namespace ProxInv.Pages.Admin
+namespace Reversify.Pages.Admin
 {
     public class IndexModel : PageModel
     {

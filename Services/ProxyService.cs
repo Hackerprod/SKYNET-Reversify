@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using ProxInv.Models;
+using Reversify.Models;
 
-namespace ProxInv.Services
+namespace Reversify.Services
 {
     /// <summary>
     /// Servicio de proxy inverso simplificado

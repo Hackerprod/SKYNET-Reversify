@@ -1,4 +1,4 @@
-namespace ProxInv.Models
+namespace Reversify.Models
 {
     /// <summary>
     /// Modelo de configuración para un proxy inverso

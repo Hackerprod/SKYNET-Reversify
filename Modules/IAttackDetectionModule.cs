@@ -1,6 +1,6 @@
-using ProxInv.Models;
+using Reversify.Models;
 
-namespace ProxInv.Modules
+namespace Reversify.Modules
 {
     /// <summary>
     /// Interfaz base para módulos de detección de ataques

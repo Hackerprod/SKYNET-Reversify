@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProxInv", "ProxInv.csproj", "{74E3A2B9-D7E2-21B4-EFDB-E2B208CA7422}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reversify", "Reversify.csproj", "{74E3A2B9-D7E2-21B4-EFDB-E2B208CA7422}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

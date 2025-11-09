@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using ProxInv.Models;
+using Reversify.Models;
 
-namespace ProxInv.Modules
+namespace Reversify.Modules
 {
     /// <summary>
     /// Módulo de detección de ataques DDoS basado en análisis de tráfico por IP

@@ -1,6 +1,6 @@
-using ProxInv.Models;
+using Reversify.Models;
 
-namespace ProxInv.Services
+namespace Reversify.Services
 {
     /// <summary>
     /// Interfaz para el servicio de proxy inverso
