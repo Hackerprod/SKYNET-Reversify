@@ -185,6 +185,21 @@ namespace Reversify.Middleware
                 }
             }
 
+            // Ajustes para SSE (Server-Sent Events)
+            var contentType = responseMessage.Content.Headers.ContentType?.MediaType;
+            var isSse = !string.IsNullOrEmpty(contentType) &&
+                        contentType.Equals("text/event-stream", StringComparison.OrdinalIgnoreCase);
+            if (isSse)
+            {
+                // Asegurar cabeceras que evitan buffering
+                if (!context.Response.Headers.ContainsKey("Cache-Control"))
+                {
+                    context.Response.Headers["Cache-Control"] = "no-cache";
+                }
+                // Desactivar buffering en proxies intermedios comunes
+                context.Response.Headers["X-Accel-Buffering"] = "no";
+            }
+
             // Copiar el body de la respuesta
             await responseMessage.Content.CopyToAsync(context.Response.Body);
         }
