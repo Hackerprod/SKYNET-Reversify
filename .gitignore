@@ -37,6 +37,7 @@ packages/
 appsettings.*.local.json
 *.secrets.json
 secrets.json
+.git
 .env
 .env.*
 
