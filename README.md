@@ -1,4 +1,4 @@
-# SKYNET Reversify (ProxInv)
+# SKYNET Reversify
 
 Dynamic reverse proxy for .NET 8 with per‑host TLS (SNI), JSON‑based configuration, and optional DDoS detection. Runs on Kestrel listening on ports 80/443.
 
@@ -69,7 +69,6 @@ Manage proxy configs via REST:
 ## Production
 ```bash
 dotnet publish -c Release -o out
-./out/ProxInv.exe
+"./out/SKYNET Reversify.exe"
 ```
 Harden ports, don’t commit secrets, and validate backend targets when modifying middleware/modules.
-

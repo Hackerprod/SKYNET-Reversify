@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Brand/application name -->
+    <AssemblyName>SKYNET Reversify</AssemblyName>
+    <Product>SKYNET Reversify</Product>
   </PropertyGroup>
 
   <ItemGroup>
