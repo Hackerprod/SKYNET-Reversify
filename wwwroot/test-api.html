@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API</title>
+</head>
+<body>
+    <h1>Test de API</h1>
+    <button onclick="testAPI()">Probar API</button>
+    <pre id="result"></pre>
+
+    <script>
+        function testAPI() {
+            console.log('Iniciando test de API...');
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Cargando...';
+            
+            fetch('/api/ProxyConfig')
+                .then(response => {
+                    console.log('Status:', response.status);
+                    console.log('Headers:', response.headers);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Datos recibidos:', data);
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultEl.textContent = 'ERROR: ' + error.message;
+                });
+        }
+        
+        // Auto-ejecutar al cargar
+        window.addEventListener('DOMContentLoaded', testAPI);
+    </script>
+</body>
+</html>

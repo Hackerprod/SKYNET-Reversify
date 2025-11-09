@@ -1,0 +1,569 @@
+@page
+@model ProxInv.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Panel de Administración - ProxInv";
+}
+
+<!-- Admin Page con diseño moderno -->
+<section class="min-h-screen pt-24 px-4 pb-12">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 fade-in">
+            <div>
+                <h1 class="font-space text-4xl md:text-5xl font-bold mb-2">
+                    <i class="fas fa-shield-alt mr-3 text-cyan-400"></i>
+                    <span class="gradient-text">Panel de Administración</span>
+                </h1>
+                <p class="text-gray-400">Gestiona las configuraciones de proxy inversas</p>
+            </div>
+            <button type="button" class="btn-primary px-6 py-3 rounded-full text-white font-semibold" onclick="showCreateModal()">
+                <i class="fas fa-plus-circle mr-2"></i> Nueva Configuración
+            </button>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="glass-strong p-6 rounded-2xl glow fade-in">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <span class="text-gray-400 text-sm">Total</span>
+                </div>
+                <div class="text-3xl font-bold gradient-text mb-1" id="totalConfigs">-</div>
+                <div class="text-gray-400 text-sm">Configuraciones</div>
+            </div>
+
+            <div class="glass-strong p-6 rounded-2xl glow fade-in" style="animation-delay: 0.1s;">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-check-circle text-white text-xl"></i>
+                    </div>
+                    <span class="text-gray-400 text-sm">Activas</span>
+                </div>
+                <div class="text-3xl font-bold text-green-400 mb-1" id="activeConfigs">-</div>
+                <div class="text-gray-400 text-sm">En servicio</div>
+            </div>
+
+            <div class="glass-strong p-6 rounded-2xl glow fade-in" style="animation-delay: 0.2s;">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-pause-circle text-white text-xl"></i>
+                    </div>
+                    <span class="text-gray-400 text-sm">Inactivas</span>
+                </div>
+                <div class="text-3xl font-bold text-gray-400 mb-1" id="inactiveConfigs">-</div>
+                <div class="text-gray-400 text-sm">Detenidas</div>
+            </div>
+
+            <div class="glass-strong p-6 rounded-2xl glow fade-in" style="animation-delay: 0.3s;">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-indigo-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-lock text-white text-xl"></i>
+                    </div>
+                    <span class="text-gray-400 text-sm">SSL</span>
+                </div>
+                <div class="text-3xl font-bold text-purple-400 mb-1" id="sslConfigs">-</div>
+                <div class="text-gray-400 text-sm">Con certificado</div>
+            </div>
+        </div>
+
+        <!-- Configuraciones Table -->
+        <div class="glass-strong rounded-3xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-white/10">
+                <h2 class="font-space text-2xl font-bold flex items-center">
+                    <i class="fas fa-list-ul mr-3 text-cyan-400"></i>
+                    Configuraciones de Proxy
+                </h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full" id="configsTable">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left">
+                            <th class="px-6 py-4 text-gray-300 font-semibold">Nombre</th>
+                            <th class="px-6 py-4 text-gray-300 font-semibold">DNS URL</th>
+                            <th class="px-6 py-4 text-gray-300 font-semibold">URL Local</th>
+                            <th class="px-6 py-4 text-gray-300 font-semibold">Estado</th>
+                            <th class="px-6 py-4 text-gray-300 font-semibold">SSL</th>
+                            <th class="px-6 py-4 text-gray-300 font-semibold">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="configsTableBody">
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center">
+                                <div class="flex justify-center">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                                </div>
+                                <p class="text-gray-400 mt-3">Cargando configuraciones...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal de Crear/Editar (diseño moderno) -->
+<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center" id="configModal">
+    <div class="glass-strong rounded-3xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="p-6 border-b border-white/10 flex justify-between items-center">
+            <h3 class="font-space text-2xl font-bold gradient-text" id="configModalTitle">Nueva Configuración</h3>
+            <button type="button" class="text-gray-400 hover:text-white transition-colors" onclick="hideConfigModal()">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <form id="configForm" class="space-y-4">
+                <input type="hidden" id="configId" />
+
+                <div>
+                    <label for="configName" class="block text-sm font-medium text-gray-300 mb-2">
+                        <i class="fas fa-tag mr-2 text-cyan-400"></i>Nombre
+                    </label>
+                    <input type="text" 
+                           class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-cyan-400 transition-colors text-white" 
+                           id="configName" 
+                           placeholder="Mi aplicación web"
+                           required />
+                </div>
+
+                <div>
+                    <label for="dnsUrl" class="block text-sm font-medium text-gray-300 mb-2">
+                        <i class="fas fa-globe mr-2 text-cyan-400"></i>DNS URL
+                    </label>
+                    <input type="text" 
+                           class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-cyan-400 transition-colors text-white" 
+                           id="dnsUrl" 
+                           placeholder="www.ejemplo.com" 
+                           required />
+                    <p class="text-gray-400 text-sm mt-1">Dominio que apunta a este servidor</p>
+                </div>
+
+                <div>
+                    <label for="localUrl" class="block text-sm font-medium text-gray-300 mb-2">
+                        <i class="fas fa-server mr-2 text-cyan-400"></i>URL Local
+                    </label>
+                    <input type="text" 
+                           class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-cyan-400 transition-colors text-white" 
+                           id="localUrl" 
+                           placeholder="http://127.0.0.1:3000" 
+                           required />
+                    <p class="text-gray-400 text-sm mt-1">Dirección local del servicio</p>
+                </div>
+
+                <div>
+                    <label for="certificatesDirectory" class="block text-sm font-medium text-gray-300 mb-2">
+                        <i class="fas fa-folder mr-2 text-purple-400"></i>Directorio de Certificados SSL (Opcional)
+                    </label>
+                    <input type="text"
+                           class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-purple-400 transition-colors text-white"
+                           id="certificatesDirectory"
+                           placeholder="C:\Certificates" />
+                    <p class="text-gray-400 text-sm mt-1">
+                        El sistema buscará automáticamente: {dnsUrl}.crt + {dnsUrl}.key o {dnsUrl}.pfx
+                    </p>
+                </div>
+
+                <div>
+                    <label for="certificatePassword" class="block text-sm font-medium text-gray-300 mb-2">
+                        <i class="fas fa-key mr-2 text-purple-400"></i>Contraseña del Certificado (Opcional, solo .pfx)
+                    </label>
+                    <input type="password"
+                           class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-purple-400 transition-colors text-white"
+                           id="certificatePassword"
+                           placeholder="••••••••" />
+                </div>
+
+                <div class="flex items-center space-x-3 p-4 bg-white/5 rounded-xl">
+                    <input type="checkbox" 
+                           class="w-5 h-5 bg-white/10 border-white/20 rounded focus:ring-2 focus:ring-cyan-400" 
+                           id="enabled" 
+                           checked />
+                    <label class="text-gray-300 font-medium cursor-pointer" for="enabled">
+                        <i class="fas fa-power-off mr-2 text-green-400"></i>Activar configuración
+                    </label>
+                </div>
+            </form>
+        </div>
+        
+        <div class="p-6 border-t border-white/10 flex justify-end gap-3">
+            <button type="button" 
+                    class="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white font-medium transition-all" 
+                    onclick="hideConfigModal()">
+                <i class="fas fa-times mr-2"></i>Cancelar
+            </button>
+            <button type="button" 
+                    class="btn-primary px-6 py-3 rounded-full text-white font-semibold" 
+                    onclick="saveConfig()">
+                <i class="fas fa-save mr-2"></i>Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación de Eliminación (diseño moderno) -->
+<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center" id="deleteModal">
+    <div class="glass-strong rounded-3xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <div class="p-6 border-b border-white/10 bg-gradient-to-r from-red-500/20 to-pink-500/20">
+            <div class="flex justify-between items-center">
+                <h3 class="font-space text-2xl font-bold text-red-400 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>Confirmar Eliminación
+                </h3>
+                <button type="button" class="text-gray-400 hover:text-white transition-colors" onclick="hideDeleteModal()">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <p class="text-gray-300 mb-3">¿Está seguro de que desea eliminar esta configuración?</p>
+            <p class="text-white font-bold text-lg" id="deleteConfigName"></p>
+            <p class="text-red-400 text-sm mt-3">
+                <i class="fas fa-info-circle mr-2"></i>Esta acción no se puede deshacer
+            </p>
+        </div>
+        
+        <div class="p-6 border-t border-white/10 flex justify-end gap-3">
+            <button type="button" 
+                    class="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white font-medium transition-all" 
+                    onclick="hideDeleteModal()">
+                <i class="fas fa-times mr-2"></i>Cancelar
+            </button>
+            <button type="button" 
+                    class="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 rounded-full text-white font-semibold transition-all" 
+                    onclick="confirmDelete()">
+                <i class="fas fa-trash mr-2"></i>Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+        let currentDeleteId = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[DEBUG] DOM Content Loaded - Iniciando...');
+            console.log('[DEBUG] Buscando configsTableBody...');
+            const tbody = document.getElementById('configsTableBody');
+            console.log('[DEBUG] configsTableBody encontrado:', tbody);
+            
+            loadConfigurations();
+            
+            // Cerrar modales al hacer click fuera
+            document.getElementById('configModal').addEventListener('click', function(e) {
+                if (e.target === this) hideConfigModal();
+            });
+            document.getElementById('deleteModal').addEventListener('click', function(e) {
+                if (e.target === this) hideDeleteModal();
+            });
+        });
+
+        function loadConfigurations() {
+            console.log('[DEBUG] Iniciando carga de configuraciones...');
+            fetch('/api/ProxyConfig')
+                .then(response => {
+                    console.log('[DEBUG] Respuesta recibida, status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(configs => {
+                    console.log('[DEBUG] Configuraciones recibidas:', configs);
+                    console.log('[DEBUG] Total configs:', configs.length);
+                    if (configs.length > 0) {
+                        console.log('[DEBUG] Primera config:', configs[0]);
+                    }
+                    updateStatistics(configs);
+                    displayConfigurations(configs);
+                })
+                .catch(error => {
+                    console.error('[ERROR] Error al cargar configuraciones:', error);
+                    const tbody = document.getElementById('configsTableBody');
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <i class="fas fa-exclamation-triangle text-red-400 text-5xl mb-4"></i>
+                                <p class="text-red-400 font-semibold mb-2">Error al cargar configuraciones</p>
+                                <p class="text-gray-400 text-sm">${error.message}</p>
+                                <button onclick="loadConfigurations()" class="btn-primary px-6 py-2 rounded-full text-white font-medium mt-4 inline-block">
+                                    <i class="fas fa-sync mr-2"></i>Reintentar
+                                </button>
+                            </td>
+                        </tr>`;
+                    showToast('Error al cargar configuraciones: ' + error.message, 'error');
+                });
+        }
+
+        function updateStatistics(configs) {
+            const total = configs.length;
+            const active = configs.filter(c => c.enabled).length;
+            const inactive = total - active;
+            const ssl = configs.filter(c => c.certificatesDirectory).length;
+
+            document.getElementById('totalConfigs').textContent = total;
+            document.getElementById('activeConfigs').textContent = active;
+            document.getElementById('inactiveConfigs').textContent = inactive;
+            document.getElementById('sslConfigs').textContent = ssl;
+        }
+
+        function displayConfigurations(configs) {
+            console.log('[DEBUG] displayConfigurations llamado con:', configs);
+            const tbody = document.getElementById('configsTableBody');
+            console.log('[DEBUG] tbody encontrado:', tbody !== null);
+
+            if (configs.length === 0) {
+                console.log('[DEBUG] No hay configuraciones, mostrando mensaje vacío');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center">
+                            <i class="fas fa-inbox text-gray-600 text-5xl mb-4"></i>
+                            <p class="text-gray-400">No hay configuraciones disponibles</p>
+                            <button onclick="showCreateModal()" class="btn-primary px-6 py-2 rounded-full text-white font-medium mt-4 inline-block">
+                                <i class="fas fa-plus-circle mr-2"></i>Crear primera configuración
+                            </button>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            console.log('[DEBUG] Generando HTML para', configs.length, 'configuraciones');
+            tbody.innerHTML = configs.map((config, index) => {
+                console.log(`[DEBUG] Procesando config ${index}:`, config);
+                return `
+                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors" style="animation-delay: ${index * 0.05}s;">
+                    <td class="px-6 py-4">
+                        <div class="font-semibold text-white">${escapeHtml(config.name)}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <code class="text-cyan-400 bg-cyan-400/10 px-3 py-1 rounded-lg text-sm">${escapeHtml(config.dnsUrl)}</code>
+                    </td>
+                    <td class="px-6 py-4">
+                        <code class="text-purple-400 bg-purple-400/10 px-3 py-1 rounded-lg text-sm">${escapeHtml(config.localUrl)}</code>
+                    </td>
+                    <td class="px-6 py-4">
+                        ${config.enabled
+                            ? '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-400/20 text-green-400"><i class="fas fa-circle text-green-400 mr-2 text-[8px]"></i>Activo</span>'
+                            : '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400"><i class="fas fa-circle text-gray-400 mr-2 text-[8px]"></i>Inactivo</span>'}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        ${config.certificatesDirectory
+                            ? '<i class="fas fa-lock text-purple-400 text-xl" title="SSL Habilitado"></i>'
+                            : '<i class="fas fa-unlock text-gray-600 text-xl" title="Sin SSL"></i>'}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex gap-2">
+                            <button class="px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg transition-all glow" 
+                                    onclick="showEditModal('${config.id}')"
+                                    title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all glow" 
+                                    onclick="showDeleteModal('${config.id}', '${escapeHtml(config.name)}')"
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            }).join('');
+            console.log('[DEBUG] HTML generado, longitud:', tbody.innerHTML.length);
+            console.log('[DEBUG] tbody.children.length:', tbody.children.length);
+            console.log('[DEBUG] Primer TR:', tbody.children[0]);
+        }
+
+        function showCreateModal() {
+            document.getElementById('configModalTitle').textContent = 'Nueva Configuración';
+            document.getElementById('configForm').reset();
+            document.getElementById('configId').value = '';
+            document.getElementById('enabled').checked = true;
+            document.getElementById('configModal').classList.remove('hidden');
+            document.getElementById('configModal').classList.add('flex');
+        }
+
+        function hideConfigModal() {
+            document.getElementById('configModal').classList.add('hidden');
+            document.getElementById('configModal').classList.remove('flex');
+        }
+
+        function showEditModal(id) {
+            fetch(`/api/ProxyConfig/${id}`)
+                .then(response => response.json())
+                .then(config => {
+                    document.getElementById('configModalTitle').textContent = 'Editar Configuración';
+                    document.getElementById('configId').value = config.id;
+                    document.getElementById('configName').value = config.name;
+                    document.getElementById('dnsUrl').value = config.dnsUrl;
+                    document.getElementById('localUrl').value = config.localUrl;
+                    document.getElementById('certificatesDirectory').value = config.certificatesDirectory || '';
+                    document.getElementById('certificatePassword').value = config.certificatePassword || '';
+                    document.getElementById('enabled').checked = config.enabled;
+                    document.getElementById('configModal').classList.remove('hidden');
+                    document.getElementById('configModal').classList.add('flex');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error al cargar configuración', 'error');
+                });
+        }
+
+        function saveConfig() {
+            const configId = document.getElementById('configId').value;
+            const isEdit = configId !== '';
+
+            const config = {
+                id: configId,
+                name: document.getElementById('configName').value,
+                dnsUrl: document.getElementById('dnsUrl').value,
+                localUrl: document.getElementById('localUrl').value,
+                certificatesDirectory: document.getElementById('certificatesDirectory').value || null,
+                certificatePassword: document.getElementById('certificatePassword').value || null,
+                enabled: document.getElementById('enabled').checked
+            };
+
+            const url = isEdit ? `/api/ProxyConfig/${configId}` : '/api/ProxyConfig';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al guardar');
+                }
+                return response.json();
+            })
+            .then(() => {
+                hideConfigModal();
+                loadConfigurations();
+                showToast(isEdit ? 'Configuración actualizada correctamente' : 'Configuración creada exitosamente', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al guardar configuración', 'error');
+            });
+        }
+
+        function showDeleteModal(id, name) {
+            currentDeleteId = id;
+            document.getElementById('deleteConfigName').textContent = name;
+            document.getElementById('deleteModal').classList.remove('hidden');
+            document.getElementById('deleteModal').classList.add('flex');
+        }
+
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            document.getElementById('deleteModal').classList.remove('flex');
+        }
+
+        function confirmDelete() {
+            if (!currentDeleteId) return;
+
+            console.log('[DEBUG] Eliminando configuración:', currentDeleteId);
+            
+            fetch(`/api/ProxyConfig/${currentDeleteId}`, {
+                method: 'DELETE'
+            })
+            .then(async response => {
+                console.log('[DEBUG] Response status:', response.status);
+                const data = await response.json();
+                console.log('[DEBUG] Response data:', data);
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Error al eliminar');
+                }
+                return data;
+            })
+            .then((data) => {
+                console.log('[DEBUG] Configuración eliminada:', data);
+                hideDeleteModal();
+                loadConfigurations();
+                showToast('Configuración eliminada correctamente', 'success');
+                currentDeleteId = null;
+            })
+            .catch(error => {
+                console.error('[ERROR] Error al eliminar:', error);
+                showToast(`Error al eliminar: ${error.message}`, 'error');
+            });
+        }
+
+        function showToast(message, type) {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toastId = 'toast_' + Date.now();
+
+            const typeStyles = {
+                success: 'from-green-500 to-emerald-600',
+                error: 'from-red-500 to-pink-600',
+                info: 'from-cyan-500 to-blue-600'
+            };
+
+            const typeIcons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = `glass-strong rounded-xl p-4 mb-3 flex items-center gap-3 animate-slide-in`;
+            toast.innerHTML = `
+                <div class="w-10 h-10 bg-gradient-to-br ${typeStyles[type] || typeStyles.info} rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fas ${typeIcons[type] || typeIcons.info} text-white"></i>
+                </div>
+                <div class="flex-1 text-white font-medium">${message}</div>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'fixed top-24 right-4 z-[60] max-w-md';
+            container.style.cssText = 'animation: none;';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Auto-refresh cada 30 segundos
+        setInterval(loadConfigurations, 30000);
+    </script>
+
+    <style>
+        @@keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+    </style>

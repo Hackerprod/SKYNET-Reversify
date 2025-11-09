@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ProxInv</title>
+
+    <!-- Tailwind CDN (used by design.htm) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/ProxInv.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <!-- Navbar (adaptado desde design.htm) -->
+    <nav class="navbar glass">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center">
+                        <i class="fas fa-brain text-white text-xl"></i>
+                    </div>
+                    <a class="font-space text-2xl font-bold gradient-text text-white" asp-area="" asp-page="/Index">ProxInv</a>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="/" class="nav-link text-gray-300 hover:text-cyan-400 transition-colors duration-300">Inicio</a>
+                    <a href="/Privacy" class="nav-link text-gray-300 hover:text-cyan-400 transition-colors duration-300">Privacidad</a>
+                    <a href="#contact" class="btn-primary px-6 py-2.5 rounded-full text-white font-medium">Contacto</a>
+                </div>
+
+                <button class="md:hidden text-white text-2xl" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu fixed top-0 right-0 w-64 h-full glass-strong z-50 md:hidden" id="mobileMenu">
+        <div class="p-6">
+            <button class="text-white text-2xl mb-8" id="closeMobileMenu">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="flex flex-col space-y-4">
+                <a href="/" class="text-gray-300 hover:text-cyan-400 transition-colors duration-300">Inicio</a>
+                <a href="/Privacy" class="text-gray-300 hover:text-cyan-400 transition-colors duration-300">Privacidad</a>
+                <a href="#contact" class="btn-primary px-6 py-2.5 rounded-full text-white font-medium text-center">Contacto</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <main role="main" class="pb-3">
+        @RenderBody()
+    </main>
+
+    <!-- Scripts -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

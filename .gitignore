@@ -1,0 +1,68 @@
+# Build artifacts
+bin/
+obj/
+out/
+publish/
+artifacts/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs & diagnostics
+*.log
+logs/
+TestResult*/
+TestResults/
+*.trx
+*.coverage*
+coverage*/
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Packages (solution-local)
+packages/
+
+# Local environment & secrets
+.mcp.json
+.claude/
+appsettings.*.local.json
+*.secrets.json
+secrets.json
+.env
+.env.*
+
+# Certificates (never commit)
+*.pfx
+*.p12
+*.crt
+*.key
+
+# Runtime proxy configs (keep examples only)
+Configurations/*.json
+!Configurations/ejemplo-ssl.json
+
+# Editor temps
+*.swp
+*.swo
+*.tmp
+*.temp
+
+# SOME
+AGENTS.md
+*.cmd
+
+
+
+
+
+
+
