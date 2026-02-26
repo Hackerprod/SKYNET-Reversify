@@ -1,7 +1,7 @@
-namespace Reversify.Models
+﻿namespace Reversify.Models
 {
     /// <summary>
-    /// Resultado de la detección de ataques
+    /// Attack detection result
     /// </summary>
     public class AttackDetectionResult
     {
@@ -14,7 +14,7 @@ namespace Reversify.Models
     }
 
     /// <summary>
-    /// Estadísticas de tráfico por IP
+    /// Traffic stats per IP
     /// </summary>
     public class IpTrafficStats
     {

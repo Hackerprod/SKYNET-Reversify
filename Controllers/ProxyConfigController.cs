@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Reversify.Models;
 using Reversify.Services;
 
@@ -9,14 +9,11 @@ namespace Reversify.Controllers
     public class ProxyConfigController : ControllerBase
     {
         private readonly ProxyConfigurationService _configService;
-        private readonly ILogger<ProxyConfigController> _logger;
 
         public ProxyConfigController(
-            ProxyConfigurationService configService,
-            ILogger<ProxyConfigController> logger)
+            ProxyConfigurationService configService)
         {
             _configService = configService;
-            _logger = logger;
         }
 
         [HttpGet]
@@ -51,7 +48,7 @@ namespace Reversify.Controllers
 
             if (result)
             {
-                _logger.LogInformation($"Configuración creada: {config.Name}");
+                Log.Info($"Configuration created: {config.Name}");
                 return CreatedAtAction(nameof(GetById), new { id = config.Id }, config);
             }
 
@@ -81,7 +78,7 @@ namespace Reversify.Controllers
 
             if (result)
             {
-                _logger.LogInformation($"Configuración actualizada: {config.Name}");
+                Log.Info($"Configuration updated: {config.Name}");
                 return Ok(config);
             }
 
@@ -103,7 +100,7 @@ namespace Reversify.Controllers
 
                 if (result)
                 {
-                    _logger.LogInformation($"Configuración eliminada: {id}");
+                    Log.Info($"Configuration deleted: {id}");
                     return Ok(new { message = "Configuración eliminada correctamente" });
                 }
 
@@ -111,7 +108,7 @@ namespace Reversify.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al eliminar configuración {id}");
+                Log.Error($"Error deleting configuration {id}: {ex.Message}");
                 return StatusCode(500, new { message = $"Error: {ex.Message}" });
             }
         }

@@ -1,18 +1,17 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Reversify.Models;
 
 namespace Reversify.Modules
 {
     /// <summary>
-    /// Módulo de detección de ataques DDoS basado en análisis de tráfico por IP
+    /// DDoS attack detection module based on per-IP traffic analysis
     /// </summary>
     public class DDoSDetectionModule : IAttackDetectionModule
     {
         private readonly ConcurrentDictionary<string, IpTrafficStats> _ipStats;
-        private readonly ILogger<DDoSDetectionModule> _logger;
         private readonly IConfiguration _configuration;
 
-        // Configuración por defecto
+        // Default configuration
         private int _maxRequestsPerMinute = 100;
         private int _maxRequestsPerSecond = 10;
         private TimeSpan _timeWindow = TimeSpan.FromMinutes(5);
@@ -23,10 +22,8 @@ namespace Reversify.Modules
         public string ModuleName => "DDoS Detection";
 
         public DDoSDetectionModule(
-            ILogger<DDoSDetectionModule> logger,
             IConfiguration configuration)
         {
-            _logger = logger;
             _configuration = configuration;
             _ipStats = new ConcurrentDictionary<string, IpTrafficStats>();
             _blockedIps = new ConcurrentDictionary<string, DateTime>();
@@ -49,7 +46,7 @@ namespace Reversify.Modules
             if (string.IsNullOrEmpty(ipAddress))
                 return null;
 
-            // Verificar si la IP está bloqueada
+            // Check if the IP is blocked
             if (_blockedIps.TryGetValue(ipAddress, out var blockedUntil))
             {
                 if (DateTime.UtcNow < blockedUntil)
@@ -65,13 +62,13 @@ namespace Reversify.Modules
                 }
                 else
                 {
-                    // Desbloquear IP
+                    // Unblock IP
                     _blockedIps.TryRemove(ipAddress, out _);
-                    _logger.LogInformation($"IP desbloqueada: {ipAddress}");
+                    Log.Info($"IP unblocked: {ipAddress}");
                 }
             }
 
-            // Obtener o crear estadísticas para esta IP
+            // Get or create stats for this IP
             var stats = _ipStats.GetOrAdd(ipAddress, _ => new IpTrafficStats
             {
                 IpAddress = ipAddress,
@@ -81,18 +78,18 @@ namespace Reversify.Modules
                 RequestTimestamps = new List<DateTime>()
             });
 
-            // Actualizar estadísticas
+            // Update stats
             var now = DateTime.UtcNow;
             stats.LastRequest = now;
             stats.RequestCount++;
             stats.RequestTimestamps.Add(now);
 
-            // Limpiar timestamps antiguos (fuera de la ventana de tiempo)
+            // Remove old timestamps (outside time window)
             stats.RequestTimestamps.RemoveAll(t => now - t > _timeWindow);
 
-            // Detección de DDoS
+            // DDoS detection
 
-            // 1. Demasiadas solicitudes por segundo
+            // 1. Too many requests per second
             var requestsInLastSecond = stats.RequestTimestamps.Count(t => now - t < TimeSpan.FromSeconds(1));
             if (requestsInLastSecond > _maxRequestsPerSecond)
             {
@@ -107,7 +104,7 @@ namespace Reversify.Modules
                 };
             }
 
-            // 2. Demasiadas solicitudes por minuto
+            // 2. Too many requests per minute
             var requestsInLastMinute = stats.RequestTimestamps.Count(t => now - t < TimeSpan.FromMinutes(1));
             if (requestsInLastMinute > _maxRequestsPerMinute)
             {
@@ -129,16 +126,16 @@ namespace Reversify.Modules
         {
             var blockUntil = DateTime.UtcNow.AddMinutes(_blockDurationMinutes);
             _blockedIps.AddOrUpdate(ipAddress, blockUntil, (key, old) => blockUntil);
-            _logger.LogWarning($"IP bloqueada por sospecha de DDoS: {ipAddress} hasta {blockUntil:yyyy-MM-dd HH:mm:ss} UTC");
+            Log.Warn($"IP blocked due to suspected DDoS: {ipAddress} until {blockUntil:yyyy-MM-dd HH:mm:ss} UTC");
         }
 
         private string GetClientIpAddress(HttpContext context)
         {
-            // Intentar obtener la IP real del cliente (considerando proxies)
+            // Try to get the real client IP (consider proxies)
             var ipAddress = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
             if (!string.IsNullOrEmpty(ipAddress))
             {
-                // X-Forwarded-For puede contener múltiples IPs, tomar la primera
+                // X-Forwarded-For can contain multiple IPs, take the first
                 return ipAddress.Split(',')[0].Trim();
             }
 
@@ -149,12 +146,12 @@ namespace Reversify.Modules
         {
             _ipStats.Clear();
             _blockedIps.Clear();
-            _logger.LogInformation("Estadísticas de DDoS reiniciadas");
+            Log.Info("DDoS stats reset");
         }
 
         private void StartCleanupTask()
         {
-            // Tarea en segundo plano para limpiar estadísticas antiguas
+            // Background task to clean old stats
             Task.Run(async () =>
             {
                 while (true)
@@ -173,7 +170,7 @@ namespace Reversify.Modules
 
                     if (oldIps.Count > 0)
                     {
-                        _logger.LogInformation($"Limpiadas {oldIps.Count} IPs inactivas de las estadísticas");
+                        Log.Info($"Cleaned {oldIps.Count} inactive IPs from stats");
                     }
                 }
             });

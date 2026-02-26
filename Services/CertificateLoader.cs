@@ -1,16 +1,16 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace Reversify.Services
 {
     /// <summary>
-    /// Servicio para cargar certificados SSL en diferentes formatos
+    /// Service to load SSL certificates in different formats
     /// </summary>
     public static class CertificateLoader
     {
         /// <summary>
-        /// Verifica si el certificado coincide con el host solicitado (CN o SANs)
+        /// Check whether the certificate matches the requested host (CN or SANs)
         /// </summary>
         public static bool MatchesHost(X509Certificate2 cert, string host)
         {
@@ -20,14 +20,14 @@ namespace Reversify.Services
             {
                 var target = host.Split(':')[0].Trim().ToLowerInvariant();
 
-                // 1) Revisar Subject Alternative Name (SAN) DNS entries (OID 2.5.29.17)
+                // 1) Check Subject Alternative Name (SAN) DNS entries (OID 2.5.29.17)
                 foreach (var ext in cert.Extensions)
                 {
                     if (ext.Oid?.Value == "2.5.29.17")
                     {
-                        // System.Security.Cryptography.AsnEncodedData.Format(true) devuelve los DNS en texto
+                        // AsnEncodedData.Format(true) returns DNS entries as text
                         var formatted = ext.Format(true);
-                        // Buscar líneas como: DNS Name=example.com
+                        // Look for lines like: DNS Name=example.com
                         var lines = formatted.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                         foreach (var line in lines)
                         {
@@ -45,7 +45,7 @@ namespace Reversify.Services
                     }
                 }
 
-                // 2) Fallback: CN del Subject
+                // 2) Fallback: CN from Subject
                 var subject = cert.GetNameInfo(X509NameType.DnsName, false);
                 if (!string.IsNullOrEmpty(subject) && HostMatches(subject.ToLowerInvariant(), target))
                 {
@@ -65,18 +65,19 @@ namespace Reversify.Services
             if (string.Equals(pattern, host, StringComparison.OrdinalIgnoreCase))
                 return true;
 
-            // Soportar comodines tipo *.dominio.com
+            // Support wildcards like *.domain.com
             if (pattern.StartsWith("*.", StringComparison.Ordinal) && host.Length > 2)
             {
-                var suffix = pattern.Substring(1); // ".dominio.com"
+                var suffix = pattern.Substring(1); // ".domain.com"
                 return host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) && host.Count(c => c == '.') >= 2;
             }
 
             return false;
         }
+
         /// <summary>
-        /// Carga un certificado desde un directorio buscando automáticamente por extensión
-        /// Busca cualquier archivo .crt + .key, .pfx o .p12 en el directorio
+        /// Load a certificate from a directory by searching common extensions
+        /// Looks for any .crt + .key, .pfx or .p12 in the directory
         /// </summary>
         public static X509Certificate2? LoadCertificateFromDirectory(
             string? directory,
@@ -89,21 +90,21 @@ namespace Reversify.Services
 
             if (!Directory.Exists(directory))
             {
-                logger?.LogWarning($"⚠️  El directorio de certificados no existe: {directory}");
+                Log.Warn($"Certificate directory does not exist: {directory}");
                 return null;
             }
 
-            logger?.LogInformation($"📂 Buscando certificados en: {directory}");
+            Log.Info($"Searching certificates in: {directory}");
 
-            // Normalizar el host (sin puerto)
+            // Normalize host (no port)
             var hostWithoutPort = host.Split(':')[0].ToLowerInvariant();
 
-            // 1. Intentar con el nombre exacto del host primero
+            // 1. Try exact host name first
             var cert = TryLoadExactMatch(directory, hostWithoutPort, password, logger);
             if (cert != null)
                 return cert;
 
-            // 1.5 Si no hay {host}.pfx pero existe un único .crt y alguna .key, generamos dinámicamente un .pfx con cadena y lo usamos
+            // 1.5 If no {host}.pfx but there is a single .crt and some .key, generate a .pfx dynamically
             try
             {
                 var candidateCrt = Directory.GetFiles(directory, "*.crt", SearchOption.TopDirectoryOnly);
@@ -121,44 +122,44 @@ namespace Reversify.Services
             }
             catch { }
 
-            // 2. Buscar cualquier archivo .crt en el directorio
+            // 2. Search any .crt in the directory
             var crtFiles = Directory.GetFiles(directory, "*.crt", SearchOption.TopDirectoryOnly);
 
             if (crtFiles.Length == 0)
             {
-                logger?.LogWarning($"⚠️  No se encontró ningún archivo .crt en el directorio");
+                Log.Warn("No .crt files found in the directory");
             }
             else if (crtFiles.Length == 1)
             {
-                // Si hay un solo .crt, asumimos que es el correcto
+                // If there is a single .crt, assume it is the correct one
                 var crtFile = crtFiles[0];
-                logger?.LogInformation($"📜 Encontrado certificado único: {Path.GetFileName(crtFile)}");
+                Log.Info($"Single certificate found: {Path.GetFileName(crtFile)}");
 
-                // Buscar su .key correspondiente
+                // Find its matching .key
                 var keyFile = FindMatchingKeyFile(crtFile, directory, logger);
 
                 if (keyFile != null)
                 {
-                    logger?.LogInformation($"🔑 Encontrada clave privada: {Path.GetFileName(keyFile)}");
+                    Log.Info($"Private key found: {Path.GetFileName(keyFile)}");
                     return LoadPemCertificate(crtFile, keyFile, logger);
                 }
             }
             else
             {
-                // Múltiples .crt, intentar encontrar el que coincida con el dominio
-                logger?.LogInformation($"📜 Encontrados {crtFiles.Length} certificados:");
+                // Multiple .crt files, try to find a match with the domain
+                Log.Info($"Found {crtFiles.Length} certificates:");
 
                 foreach (var crtFile in crtFiles)
                 {
                     var fileName = Path.GetFileNameWithoutExtension(crtFile).ToLowerInvariant();
-                    logger?.LogInformation($"   - {Path.GetFileName(crtFile)}");
+                    Log.Info($"   - {Path.GetFileName(crtFile)}");
 
-                    // Verificar si el nombre del archivo contiene partes del dominio
+                    // Check if the file name contains parts of the domain
                     var domainParts = hostWithoutPort.Replace("www.", "").Replace("-", "_").Replace(".", "_").Split('_');
 
                     if (domainParts.Any(part => !string.IsNullOrEmpty(part) && fileName.Contains(part)))
                     {
-                        logger?.LogInformation($"✅ Coincidencia encontrada: {Path.GetFileName(crtFile)}");
+                        Log.Info($"Match found: {Path.GetFileName(crtFile)}");
 
                         var keyFile = FindMatchingKeyFile(crtFile, directory, logger);
                         if (keyFile != null)
@@ -169,12 +170,12 @@ namespace Reversify.Services
                 }
             }
 
-            // 3. Buscar archivos .pfx
+            // 3. Search .pfx files
             var pfxFiles = Directory.GetFiles(directory, "*.pfx", SearchOption.TopDirectoryOnly);
             if (pfxFiles.Length > 0)
             {
                 var pfxFile = pfxFiles[0];
-                logger?.LogInformation($"📜 Certificado PFX encontrado: {Path.GetFileName(pfxFile)}");
+                Log.Info($"PFX certificate found: {Path.GetFileName(pfxFile)}");
 
                 try
                 {
@@ -182,16 +183,16 @@ namespace Reversify.Services
                 }
                 catch (Exception ex)
                 {
-                    logger?.LogError(ex, $"❌ Error al cargar certificado PFX: {pfxFile}");
+                    Log.Error($"Error loading PFX certificate: {pfxFile}. {ex.Message}");
                 }
             }
 
-            // 4. Buscar archivos .p12
+            // 4. Search .p12 files
             var p12Files = Directory.GetFiles(directory, "*.p12", SearchOption.TopDirectoryOnly);
             if (p12Files.Length > 0)
             {
                 var p12File = p12Files[0];
-                logger?.LogInformation($"📜 Certificado P12 encontrado: {Path.GetFileName(p12File)}");
+                Log.Info($"P12 certificate found: {Path.GetFileName(p12File)}");
 
                 try
                 {
@@ -199,58 +200,58 @@ namespace Reversify.Services
                 }
                 catch (Exception ex)
                 {
-                    logger?.LogError(ex, $"❌ Error al cargar certificado P12: {p12File}");
+                    Log.Error($"Error loading P12 certificate: {p12File}. {ex.Message}");
                 }
             }
 
-            logger?.LogWarning($"⚠️  No se pudieron cargar certificados para '{host}' desde el directorio");
+            Log.Warn($"Could not load certificates for '{host}' from directory");
             return null;
         }
 
         /// <summary>
-        /// Intenta cargar con el nombre exacto del host
+        /// Try to load with the exact host name
         /// </summary>
         private static X509Certificate2? TryLoadExactMatch(string directory, string host, string? password, ILogger? logger)
         {
-            // Buscar certificado PEM (.crt + .key) con nombre exacto
+            // Look for PEM certificate (.crt + .key) with exact name
             var crtPath = Path.Combine(directory, $"{host}.crt");
             var keyPath = Path.Combine(directory, $"{host}.key");
 
             if (File.Exists(crtPath) && File.Exists(keyPath))
             {
-                logger?.LogInformation($"📜 Certificados PEM encontrados (nombre exacto):");
-                logger?.LogInformation($"   CRT: {Path.GetFileName(crtPath)}");
-                logger?.LogInformation($"   KEY: {Path.GetFileName(keyPath)}");
+                Log.Info("PEM certificates found (exact name):");
+                Log.Info($"   CRT: {Path.GetFileName(crtPath)}");
+                Log.Info($"   KEY: {Path.GetFileName(keyPath)}");
                 return LoadPemCertificate(crtPath, keyPath, logger);
             }
 
-            // Buscar certificado PFX con nombre exacto
+            // Look for PFX certificate with exact name
             var pfxPath = Path.Combine(directory, $"{host}.pfx");
             if (File.Exists(pfxPath))
             {
-                logger?.LogInformation($"📜 Certificado PFX encontrado (nombre exacto): {Path.GetFileName(pfxPath)}");
+                Log.Info($"PFX certificate found (exact name): {Path.GetFileName(pfxPath)}");
                 try
                 {
                     return new X509Certificate2(pfxPath, password, X509KeyStorageFlags.Exportable);
                 }
                 catch (Exception ex)
                 {
-                    logger?.LogError(ex, $"❌ Error al cargar certificado PFX: {pfxPath}");
+                    Log.Error($"Error loading PFX certificate: {pfxPath}. {ex.Message}");
                 }
             }
 
-            // Buscar certificado P12 con nombre exacto
+            // Look for P12 certificate with exact name
             var p12Path = Path.Combine(directory, $"{host}.p12");
             if (File.Exists(p12Path))
             {
-                logger?.LogInformation($"📜 Certificado P12 encontrado (nombre exacto): {Path.GetFileName(p12Path)}");
+                Log.Info($"P12 certificate found (exact name): {Path.GetFileName(p12Path)}");
                 try
                 {
                     return new X509Certificate2(p12Path, password, X509KeyStorageFlags.Exportable);
                 }
                 catch (Exception ex)
                 {
-                    logger?.LogError(ex, $"❌ Error al cargar certificado P12: {p12Path}");
+                    Log.Error($"Error loading P12 certificate: {p12Path}. {ex.Message}");
                 }
             }
 
@@ -258,58 +259,58 @@ namespace Reversify.Services
         }
 
         /// <summary>
-        /// Busca el archivo .key que corresponde a un .crt
+        /// Find the .key file corresponding to a .crt
         /// </summary>
         private static string? FindMatchingKeyFile(string crtFile, string directory, ILogger? logger)
         {
             var baseName = Path.GetFileNameWithoutExtension(crtFile);
 
-            // 1. Buscar con el mismo nombre base
+            // 1. Look for the same base name
             var expectedKeyFile = Path.Combine(directory, $"{baseName}.key");
             if (File.Exists(expectedKeyFile))
             {
                 return expectedKeyFile;
             }
 
-            // 2. Buscar archivo llamado "private.key" o "privatekey.key"
+            // 2. Look for a file named "private.key" or "privatekey.key"
             var privateKeyFile = Path.Combine(directory, "private.key");
             if (File.Exists(privateKeyFile))
             {
-                logger?.LogInformation($"🔑 Usando clave privada genérica: private.key");
+                Log.Info("Using generic private key: private.key");
                 return privateKeyFile;
             }
 
             privateKeyFile = Path.Combine(directory, "privatekey.key");
             if (File.Exists(privateKeyFile))
             {
-                logger?.LogInformation($"🔑 Usando clave privada genérica: privatekey.key");
+                Log.Info("Using generic private key: privatekey.key");
                 return privateKeyFile;
             }
 
-            // 3. Buscar cualquier archivo .key en el directorio
+            // 3. Look for any .key file in the directory
             var keyFiles = Directory.GetFiles(directory, "*.key", SearchOption.TopDirectoryOnly);
             if (keyFiles.Length == 1)
             {
-                logger?.LogInformation($"🔑 Usando única clave privada encontrada: {Path.GetFileName(keyFiles[0])}");
+                Log.Info($"Using the only private key found: {Path.GetFileName(keyFiles[0])}");
                 return keyFiles[0];
             }
             else if (keyFiles.Length > 1)
             {
-                logger?.LogWarning($"⚠️  Se encontraron {keyFiles.Length} archivos .key, no se puede determinar cuál usar");
+                Log.Warn($"Found {keyFiles.Length} .key files, cannot determine which one to use");
                 foreach (var keyFile in keyFiles)
                 {
-                    logger?.LogWarning($"   - {Path.GetFileName(keyFile)}");
+                    Log.Warn($"   - {Path.GetFileName(keyFile)}");
                 }
             }
             else
             {
-                logger?.LogWarning($"⚠️  No se encontró ningún archivo .key para {Path.GetFileName(crtFile)}");
+                Log.Warn($"No .key file found for {Path.GetFileName(crtFile)}");
             }
 
             return null;
         }
 
-        // Genera un PFX conteniendo el certificado + clave + cadena (si existe) y lo carga
+        // Generate a PFX containing certificate + key + chain (if available) and load it
         private static X509Certificate2? GeneratePfxAndLoad(string host, string crtPath, string keyPath, ILogger? logger)
         {
             try
@@ -318,18 +319,18 @@ namespace Reversify.Services
                 var baseName = Path.GetFileNameWithoutExtension(crtPath);
                 var hostName = host.Split(':')[0].ToLowerInvariant();
 
-                // Rutas posibles de CA bundle
+                // Possible CA bundle paths
                 var caBundleByBase = Path.Combine(directory, $"{baseName}.ca-bundle");
                 var caBundleByHost = Path.Combine(directory, $"{hostName}.ca-bundle");
                 string? caBundlePath = null;
                 if (File.Exists(caBundleByHost)) caBundlePath = caBundleByHost;
                 else if (File.Exists(caBundleByBase)) caBundlePath = caBundleByBase;
 
-                // Leer leaf cert
+                // Read leaf cert
                 var leafPem = File.ReadAllText(crtPath);
                 var leafCert = X509Certificate2.CreateFromPem(leafPem);
 
-                // Leer clave privada
+                // Read private key
                 var keyPem = File.ReadAllText(keyPath);
                 RSA? rsa = null; ECDsa? ecdsa = null;
                 if (keyPem.Contains("BEGIN RSA PRIVATE KEY") || keyPem.Contains("BEGIN PRIVATE KEY"))
@@ -344,26 +345,26 @@ namespace Reversify.Services
                 }
                 else
                 {
-                    logger?.LogWarning("Tipo de clave privada no reconocido para generar PFX");
+                    Log.Warn("Unrecognized private key type for PFX generation");
                     return null;
                 }
 
                 var leafWithKey = rsa != null ? leafCert.CopyWithPrivateKey(rsa) : leafCert.CopyWithPrivateKey(ecdsa!);
 
-                // Validar correspondencia key ↔ cert
+                // Validate key -> cert match
                 if (rsa != null)
                 {
                     using var pub = leafWithKey.GetRSAPublicKey();
                     if (pub == null)
                     {
-                        logger?.LogError("Clave pública RSA inexistente en el certificado");
+                        Log.Error("RSA public key missing in certificate");
                         return null;
                     }
                     var pubParams = pub.ExportParameters(false);
                     var privParams = rsa.ExportParameters(false);
                     if (pubParams.Modulus == null || privParams.Modulus == null || !pubParams.Modulus.SequenceEqual(privParams.Modulus))
                     {
-                        logger?.LogError("La clave privada RSA no corresponde al certificado");
+                        Log.Error("RSA private key does not match the certificate");
                         return null;
                     }
                 }
@@ -372,7 +373,7 @@ namespace Reversify.Services
                     using var pub = leafWithKey.GetECDsaPublicKey();
                     if (pub == null)
                     {
-                        logger?.LogError("Clave pública ECDSA inexistente en el certificado");
+                        Log.Error("ECDSA public key missing in certificate");
                         return null;
                     }
                     var pubParams = pub.ExportParameters(false);
@@ -380,17 +381,17 @@ namespace Reversify.Services
                     if (pubParams.Q.X == null || pubParams.Q.Y == null || privParams.Q.X == null || privParams.Q.Y == null ||
                         !pubParams.Q.X.SequenceEqual(privParams.Q.X) || !pubParams.Q.Y.SequenceEqual(privParams.Q.Y))
                     {
-                        logger?.LogError("La clave privada ECDSA no corresponde al certificado");
+                        Log.Error("ECDSA private key does not match the certificate");
                         return null;
                     }
                 }
 
-                // Construir colección con cadena
+                // Build collection with chain
                 var collection = new X509Certificate2Collection();
                 collection.Add(leafWithKey);
                 if (!string.IsNullOrEmpty(caBundlePath))
                 {
-                    logger?.LogInformation($"Usando CA bundle: {Path.GetFileName(caBundlePath)}");
+                    Log.Info($"Using CA bundle: {Path.GetFileName(caBundlePath)}");
                     var caPem = File.ReadAllText(caBundlePath);
                     foreach (var ca in ParseCertificatesFromPem(caPem))
                     {
@@ -398,18 +399,18 @@ namespace Reversify.Services
                     }
                 }
 
-                // Exportar a PFX y guardar con nombre del host
+                // Export to PFX and save using host name
                 var pfxBytes = collection.Export(X509ContentType.Pkcs12, string.Empty);
                 var outPath = Path.Combine(directory, $"{hostName}.pfx");
                 File.WriteAllBytes(outPath, pfxBytes);
-                logger?.LogInformation($"PFX generado dinámicamente: {Path.GetFileName(outPath)}");
+                Log.Info($"Dynamically generated PFX: {Path.GetFileName(outPath)}");
 
-                // Cargar el PFX recién generado y devolverlo
+                // Load and return the generated PFX
                 return new X509Certificate2(pfxBytes, string.Empty, X509KeyStorageFlags.Exportable);
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Error generando PFX dinámicamente desde PEM");
+                Log.Error($"Error generating PFX dynamically from PEM: {ex.Message}");
                 return null;
             }
         }
@@ -443,7 +444,7 @@ namespace Reversify.Services
         }
 
         /// <summary>
-        /// Carga un certificado desde archivos (soporta .pfx y .crt/.key)
+        /// Load a certificate from files (supports .pfx and .crt/.key)
         /// </summary>
         public static X509Certificate2? LoadCertificate(
             string? certPath,
@@ -460,95 +461,95 @@ namespace Reversify.Services
 
                 if (extension == ".pfx" || extension == ".p12")
                 {
-                    // Cargar certificado PFX
-                    logger?.LogInformation($"📜 Cargando certificado PFX: {certPath}");
+                    // Load PFX certificate
+                    Log.Info($"Loading PFX certificate: {certPath}");
                     return new X509Certificate2(certPath, password, X509KeyStorageFlags.Exportable);
                 }
                 else if (extension == ".crt" || extension == ".pem" || extension == ".cer")
                 {
-                    // Cargar certificado PEM (.crt + .key)
+                    // Load PEM certificate (.crt + .key)
                     if (string.IsNullOrEmpty(keyPath))
                     {
-                        logger?.LogWarning($"⚠️  Certificado .crt requiere archivo .key");
+                        Log.Warn(".crt certificate requires a .key file");
                         return null;
                     }
 
-                    logger?.LogInformation($"📜 Cargando certificado PEM: {certPath} + {keyPath}");
+                    Log.Info($"Loading PEM certificate: {certPath} + {keyPath}");
                     return LoadPemCertificate(certPath, keyPath, logger);
                 }
                 else
                 {
-                    logger?.LogWarning($"⚠️  Formato de certificado no soportado: {extension}");
+                    Log.Warn($"Unsupported certificate format: {extension}");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, $"❌ Error al cargar certificado: {certPath}");
+                Log.Error($"Error loading certificate: {certPath}. {ex.Message}");
                 return null;
             }
         }
 
         /// <summary>
-        /// Carga un certificado en formato PEM (.crt + .key)
-        /// Si existe un .ca-bundle, lo combina automáticamente para formar la cadena completa
+        /// Load a PEM certificate (.crt + .key)
+        /// If a .ca-bundle exists, it is combined automatically to form the full chain
         /// </summary>
         private static X509Certificate2? LoadPemCertificate(string certPath, string keyPath, ILogger? logger)
         {
             try
             {
-                // Leer el certificado
+                // Read certificate
                 var certPem = File.ReadAllText(certPath);
 
-                // Buscar y combinar con CA bundle si existe
+                // Combine with CA bundle if exists
                 var directory = Path.GetDirectoryName(certPath);
                 var baseName = Path.GetFileNameWithoutExtension(certPath);
                 var caBundlePath = Path.Combine(directory!, $"{baseName}.ca-bundle");
 
                 if (File.Exists(caBundlePath))
                 {
-                    logger?.LogInformation($"🔗 Encontrado CA bundle: {Path.GetFileName(caBundlePath)}");
+                    Log.Info($"Found CA bundle: {Path.GetFileName(caBundlePath)}");
                     var caBundlePem = File.ReadAllText(caBundlePath);
 
-                    // Combinar certificado + CA bundle para formar la cadena completa
+                    // Combine certificate + CA bundle to form full chain
                     certPem = certPem.TrimEnd() + "\n" + caBundlePem.TrimEnd() + "\n";
-                    logger?.LogInformation($"✅ Cadena de certificados combinada automáticamente");
+                    Log.Info("Certificate chain combined automatically");
                 }
                 else
                 {
-                    logger?.LogDebug($"ℹ️  No se encontró CA bundle (opcional): {baseName}.ca-bundle");
+                    Log.Info($"No CA bundle found (optional): {baseName}.ca-bundle");
                 }
 
                 var cert = X509Certificate2.CreateFromPem(certPem);
 
-                // Leer la clave privada
+                // Read private key
                 var keyPem = File.ReadAllText(keyPath);
 
-                // Determinar el tipo de clave privada
+                // Determine private key type
                 RSA? rsa = null;
                 ECDsa? ecdsa = null;
 
                 if (keyPem.Contains("BEGIN RSA PRIVATE KEY") || keyPem.Contains("BEGIN PRIVATE KEY"))
                 {
-                    // Clave RSA
+                    // RSA key
                     rsa = RSA.Create();
                     rsa.ImportFromPem(keyPem);
-                    logger?.LogDebug("  → Tipo: RSA");
+                    Log.Info("  -> Type: RSA");
                 }
                 else if (keyPem.Contains("BEGIN EC PRIVATE KEY"))
                 {
-                    // Clave ECDSA
+                    // ECDSA key
                     ecdsa = ECDsa.Create();
                     ecdsa.ImportFromPem(keyPem);
-                    logger?.LogDebug("  → Tipo: ECDSA");
+                    Log.Info("  -> Type: ECDSA");
                 }
                 else
                 {
-                    logger?.LogWarning($"⚠️  Tipo de clave privada no reconocido");
+                    Log.Warn("Unrecognized private key type");
                     return null;
                 }
 
-                // Combinar certificado con clave privada
+                // Combine certificate with private key
                 X509Certificate2 certWithKey;
                 if (rsa != null)
                 {
@@ -563,24 +564,31 @@ namespace Reversify.Services
                     return null;
                 }
 
-                logger?.LogInformation($"✅ Certificado cargado correctamente");
-                logger?.LogInformation($"  → Subject: {certWithKey.Subject}");
-                logger?.LogInformation($"  → Issuer: {certWithKey.Issuer}");
-                logger?.LogInformation($"  → Válido desde: {certWithKey.NotBefore:yyyy-MM-dd}");
-                logger?.LogInformation($"  → Válido hasta: {certWithKey.NotAfter:yyyy-MM-dd}");
-                logger?.LogInformation($"  → Días restantes: {(certWithKey.NotAfter - DateTime.Now).Days}");
+                // Re-import as PFX to ensure the private key is usable by SChannel/Kestrel on Windows
+                var pfxBytes = certWithKey.Export(X509ContentType.Pkcs12, string.Empty);
+                var materialized = new X509Certificate2(
+                    pfxBytes,
+                    string.Empty,
+                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
 
-                return certWithKey;
+                Log.Info("Certificate loaded successfully");
+                Log.Info($"  -> Subject: {materialized.Subject}");
+                Log.Info($"  -> Issuer: {materialized.Issuer}");
+                Log.Info($"  -> Valid from: {materialized.NotBefore:yyyy-MM-dd}");
+                Log.Info($"  -> Valid until: {materialized.NotAfter:yyyy-MM-dd}");
+                Log.Info($"  -> Days remaining: {(materialized.NotAfter - DateTime.Now).Days}");
+
+                return materialized;
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, $"❌ Error al cargar certificado PEM");
+                Log.Error($"Error loading PEM certificate: {ex.Message}");
                 return null;
             }
         }
 
         /// <summary>
-        /// Verifica si un certificado es válido
+        /// Verify if a certificate is valid
         /// </summary>
         public static bool IsCertificateValid(X509Certificate2 cert, ILogger? logger = null)
         {
@@ -590,27 +598,27 @@ namespace Reversify.Services
 
                 if (now < cert.NotBefore)
                 {
-                    logger?.LogWarning($"⚠️  Certificado aún no es válido (válido desde {cert.NotBefore:yyyy-MM-dd})");
+                    Log.Warn($"Certificate is not valid yet (valid from {cert.NotBefore:yyyy-MM-dd})");
                     return false;
                 }
 
                 if (now > cert.NotAfter)
                 {
-                    logger?.LogWarning($"⚠️  Certificado expirado (expiró el {cert.NotAfter:yyyy-MM-dd})");
+                    Log.Warn($"Certificate expired (expired on {cert.NotAfter:yyyy-MM-dd})");
                     return false;
                 }
 
                 var daysRemaining = (cert.NotAfter - now).Days;
                 if (daysRemaining < 30)
                 {
-                    logger?.LogWarning($"⚠️  Certificado expira pronto ({daysRemaining} días)");
+                    Log.Warn($"Certificate expires soon ({daysRemaining} days)");
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "❌ Error al validar certificado");
+                Log.Error($"Error validating certificate: {ex.Message}");
                 return false;
             }
         }

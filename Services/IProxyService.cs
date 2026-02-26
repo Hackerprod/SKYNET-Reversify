@@ -1,9 +1,9 @@
-using Reversify.Models;
+﻿using Reversify.Models;
 
 namespace Reversify.Services
 {
     /// <summary>
-    /// Interfaz para el servicio de proxy inverso
+    /// Interface for the reverse proxy service
     /// </summary>
     public interface IProxyService
     {

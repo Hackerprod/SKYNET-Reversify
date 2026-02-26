@@ -1,44 +1,44 @@
-namespace Reversify.Models
+﻿namespace Reversify.Models
 {
     /// <summary>
-    /// Modelo de configuración para un proxy inverso
+    /// Reverse proxy configuration model
     /// </summary>
     public class ProxyConfig
     {
         /// <summary>
-        /// URL del DNS (ej: www.mipage1.com)
+        /// DNS URL (e.g., www.mypage1.com)
         /// </summary>
         public string DnsUrl { get; set; } = string.Empty;
 
         /// <summary>
-        /// URL local a la que se redirigirá (ej: http://127.0.0.1:1111)
+        /// Local URL to forward to (e.g., http://127.0.0.1:1111)
         /// </summary>
         public string LocalUrl { get; set; } = string.Empty;
 
         /// <summary>
-        /// Directorio que contiene los certificados SSL/TLS (opcional)
-        /// El sistema buscará automáticamente .crt/.key o .pfx con el mismo nombre que DnsUrl
-        /// Ejemplo: C:\Certificates -> buscará www.midominio.com.crt + www.midominio.com.key
+        /// Directory containing SSL/TLS certificates (optional)
+        /// The system will automatically look for .crt/.key or .pfx with the same name as DnsUrl
+        /// Example: C:\Certificates -> will look for www.mydomain.com.crt + www.mydomain.com.key
         /// </summary>
         public string? CertificatesDirectory { get; set; }
 
         /// <summary>
-        /// Contraseña del certificado (opcional, solo para .pfx)
+        /// Certificate password (optional, .pfx only)
         /// </summary>
         public string? CertificatePassword { get; set; }
 
         /// <summary>
-        /// Indica si está activo
+        /// Indicates whether it is active
         /// </summary>
         public bool Enabled { get; set; } = true;
 
         /// <summary>
-        /// Nombre descriptivo de la configuración
+        /// Descriptive configuration name
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// ID único de la configuración
+        /// Unique configuration ID
         /// </summary>
         public string Id { get; set; } = Guid.NewGuid().ToString();
     }

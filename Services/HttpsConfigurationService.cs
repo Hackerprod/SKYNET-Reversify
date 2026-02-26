@@ -1,10 +1,10 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Reversify.Services
 {
     /// <summary>
-    /// Servicio para gestionar certificados HTTPS por host
+    /// Service to manage HTTPS certificates per host
     /// </summary>
     public class HttpsConfigurationService
     {
@@ -18,7 +18,7 @@ namespace Reversify.Services
         }
 
         /// <summary>
-        /// Registra un certificado para un host específico usando un directorio
+        /// Register a certificate for a specific host using a directory
         /// </summary>
         public void AddOrUpdateCertificateFromDirectory(string host, string? directory, string? password = null)
         {
@@ -36,12 +36,12 @@ namespace Reversify.Services
             }
             else
             {
-                _logger.LogWarning($"No se pudo cargar certificado para {host}");
+                Log.Warn($"Could not load certificate for {host}");
             }
         }
 
         /// <summary>
-        /// Registra un certificado para un host específico (método legacy para compatibilidad)
+        /// Register a certificate for a specific host (legacy method for compatibility)
         /// </summary>
         public void AddOrUpdateCertificate(string host, string? certPath, string? keyPath = null, string? password = null)
         {
@@ -59,7 +59,7 @@ namespace Reversify.Services
             }
             else
             {
-                _logger.LogWarning($"No se pudo cargar certificado para {host}");
+                Log.Warn($"Could not load certificate for {host}");
             }
         }
 
@@ -67,19 +67,19 @@ namespace Reversify.Services
         {
             var normalized = host.Split(':')[0].ToLowerInvariant();
             _certificates.AddOrUpdate(normalized, cert, (key, old) => cert);
-            _logger.LogInformation($"Certificado registrado para {normalized}");
+            Log.Info($"Certificate registered for {normalized}");
 
-            // Registrar alias www/sin-www si el certificado lo cubre
+            // Register www/non-www alias if the certificate covers it
             var alt = normalized.StartsWith("www.") ? normalized.Substring(4) : $"www.{normalized}";
             if (CertificateLoader.MatchesHost(cert, alt))
             {
                 _certificates.AddOrUpdate(alt, cert, (key, old) => cert);
-                _logger.LogInformation($"Certificado también registrado para alias: {alt}");
+                Log.Info($"Certificate also registered for alias: {alt}");
             }
         }
 
         /// <summary>
-        /// Remueve el certificado de un host (y su alias si existiera)
+        /// Remove certificate for a host (and its alias if present)
         /// </summary>
         public void RemoveCertificate(string host)
         {
@@ -87,42 +87,42 @@ namespace Reversify.Services
             if (_certificates.TryRemove(normalized, out var cert))
             {
                 cert.Dispose();
-                _logger.LogInformation($"Certificado removido para {normalized}");
+                Log.Info($"Certificate removed for {normalized}");
             }
 
             var alt = normalized.StartsWith("www.") ? normalized.Substring(4) : $"www.{normalized}";
             if (_certificates.TryRemove(alt, out var altCert))
             {
                 altCert.Dispose();
-                _logger.LogInformation($"Certificado removido para alias: {alt}");
+                Log.Info($"Certificate removed for alias: {alt}");
             }
         }
 
         /// <summary>
-        /// Obtiene el certificado para un host específico
+        /// Get certificate for a specific host
         /// </summary>
         public X509Certificate2? GetCertificateForHost(string host)
         {
-            // Normalizar el host
+            // Normalize host
             var hostWithoutPort = host.Split(':')[0].ToLowerInvariant();
 
-            // Buscar certificado directo y validar contra CN/SAN
+            // Direct lookup and validate against CN/SAN
             if (_certificates.TryGetValue(hostWithoutPort, out var cert))
             {
                 if (CertificateLoader.MatchesHost(cert, hostWithoutPort))
                 {
                     return cert;
                 }
-                _logger.LogWarning($"Certificado encontrado no coincide con host solicitado: {hostWithoutPort} -> {cert.Subject}");
+                Log.Warn($"Certificate found does not match requested host: {hostWithoutPort} -> {cert.Subject}");
             }
 
-            // Buscar con/sin www
+            // Try with/without www
             if (hostWithoutPort.StartsWith("www."))
             {
                 var withoutWww = hostWithoutPort.Substring(4);
                 if (_certificates.TryGetValue(withoutWww, out cert) && CertificateLoader.MatchesHost(cert, hostWithoutPort))
                 {
-                    _logger.LogDebug($"Certificado resuelto por alias: {hostWithoutPort} -> {withoutWww}");
+                    Log.Info($"Certificate resolved by alias: {hostWithoutPort} -> {withoutWww}");
                     return cert;
                 }
             }
@@ -131,17 +131,17 @@ namespace Reversify.Services
                 var withWww = $"www.{hostWithoutPort}";
                 if (_certificates.TryGetValue(withWww, out cert) && CertificateLoader.MatchesHost(cert, hostWithoutPort))
                 {
-                    _logger.LogDebug($"Certificado resuelto por alias: {hostWithoutPort} -> {withWww}");
+                    Log.Info($"Certificate resolved by alias: {hostWithoutPort} -> {withWww}");
                     return cert;
                 }
             }
 
-            _logger.LogWarning($"No hay certificado válido (CN/SAN) para host: {hostWithoutPort}");
+            Log.Warn($"No valid certificate (CN/SAN) for host: {hostWithoutPort}");
             return null;
         }
 
         /// <summary>
-        /// Obtiene todos los hosts con certificados configurados
+        /// Get all configured hosts with certificates
         /// </summary>
         public IEnumerable<string> GetConfiguredHosts()
         {

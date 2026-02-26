@@ -1,15 +1,14 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.Json;
 using Reversify.Models;
 
 namespace Reversify.Services
 {
     /// <summary>
-    /// Servicio para gestionar la configuración de proxies desde archivos JSON
+    /// Service to manage proxy configuration from JSON files
     /// </summary>
     public class ProxyConfigurationService : IHostedService, IDisposable
     {
-        private readonly ILogger<ProxyConfigurationService> _logger;
         private readonly string _configurationPath;
         private readonly ConcurrentDictionary<string, ProxyConfig> _configurations;
         private FileSystemWatcher? _fileWatcher;
@@ -18,12 +17,10 @@ namespace Reversify.Services
         private readonly HttpsConfigurationService _httpsService;
 
         public ProxyConfigurationService(
-            ILogger<ProxyConfigurationService> logger,
             IConfiguration configuration,
             IProxyService proxyService,
             HttpsConfigurationService httpsService)
         {
-            _logger = logger;
             _proxyService = proxyService;
             _httpsService = httpsService;
             _configurationPath = configuration["ProxyConfigPath"] ??
@@ -34,19 +31,19 @@ namespace Reversify.Services
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Iniciando servicio de configuración de proxies");
+            Log.Info("Starting proxy configuration service");
 
-            // Crear directorio si no existe
+            // Create directory if it does not exist
             if (!Directory.Exists(_configurationPath))
             {
                 Directory.CreateDirectory(_configurationPath);
-                _logger.LogInformation($"Directorio de configuración creado: {_configurationPath}");
+                Log.Info($"Configuration directory created: {_configurationPath}");
             }
 
-            // Cargar configuraciones existentes
+            // Load existing configurations
             LoadConfigurations();
 
-            // Configurar FileSystemWatcher
+            // Configure FileSystemWatcher
             SetupFileWatcher();
 
             return Task.CompletedTask;
@@ -54,7 +51,7 @@ namespace Reversify.Services
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Deteniendo servicio de configuración de proxies");
+            Log.Info("Stopping proxy configuration service");
             _fileWatcher?.Dispose();
             return Task.CompletedTask;
         }
@@ -72,81 +69,79 @@ namespace Reversify.Services
             _fileWatcher.Changed += OnConfigurationFileChanged;
             _fileWatcher.Deleted += OnConfigurationFileDeleted;
             _fileWatcher.Renamed += OnConfigurationFileRenamed;
-
-            _logger.LogInformation("FileSystemWatcher configurado correctamente");
         }
 
         private void OnConfigurationFileChanged(object sender, FileSystemEventArgs e)
         {
-            _logger.LogInformation($"Archivo de configuración modificado: {e.Name}");
+            Log.Info($"Configuration file changed: {e.Name}");
 
-            // Pequeño delay para asegurar que el archivo está completamente escrito
+            // Small delay to ensure the file is fully written
             Task.Delay(100).ContinueWith(_ => LoadConfiguration(e.FullPath));
         }
 
         private void OnConfigurationFileDeleted(object sender, FileSystemEventArgs e)
         {
-            _logger.LogInformation($"Archivo de configuración eliminado: {e.Name}");
+            Log.Info($"Configuration file deleted: {e.Name}");
 
-            // Buscar la configuración por nombre de archivo o por ID
+            // Find configuration by file name or by ID
             var fileName = Path.GetFileNameWithoutExtension(e.Name);
-            
+
             if (string.IsNullOrEmpty(fileName))
             {
-                _logger.LogWarning($"Nombre de archivo inválido: {e.Name}");
+                Log.Warn($"Invalid file name: {e.Name}");
                 return;
             }
-            
-            // Intentar remover usando el nombre del archivo como clave
+
+            // Try removing using the file name as the key
             if (_configurations.TryRemove(fileName, out var config))
             {
                 _proxyService.RemoveProxy(config.DnsUrl);
-                _logger.LogInformation($"Configuración removida por nombre de archivo: {config.Name}");
+                Log.Info($"Configuration removed by file name: {config.Name}");
                 return;
             }
-            
-            // Si no se encontró por nombre de archivo, buscar por ID que coincida
-            var configToRemove = _configurations.Values.FirstOrDefault(c => 
+
+            // If not found by file name, look for matching ID
+            var configToRemove = _configurations.Values.FirstOrDefault(c =>
             {
-                // Comparar si el archivo que se eliminó corresponde a este ID
+                // Compare if the deleted file corresponds to this ID
                 var expectedFileName = $"{c.Id}.json";
                 var actualFileName = e.Name;
                 return expectedFileName.Equals(actualFileName, StringComparison.OrdinalIgnoreCase);
             });
-            
+
             if (configToRemove != null)
             {
                 if (_configurations.TryRemove(configToRemove.Id, out _))
                 {
                     _proxyService.RemoveProxy(configToRemove.DnsUrl);
-                    _logger.LogInformation($"Configuración removida por ID: {configToRemove.Name} ({configToRemove.Id})");
+                    Log.Info($"Configuration removed by ID: {configToRemove.Name} ({configToRemove.Id})");
                 }
             }
             else
             {
-                _logger.LogWarning($"No se encontró configuración para el archivo eliminado: {e.Name}");
+                Log.Warn($"No configuration found for deleted file: {e.Name}");
             }
         }
 
         private void OnConfigurationFileRenamed(object sender, RenamedEventArgs e)
         {
-            _logger.LogInformation($"Archivo de configuración renombrado: {e.OldName} -> {e.Name}");
+            Log.Info($"Configuration file renamed: {e.OldName} -> {e.Name}");
 
-            // Remover la configuración antigua
+            // Remove old configuration
             var oldFileName = Path.GetFileNameWithoutExtension(e.OldName);
             if (!string.IsNullOrEmpty(oldFileName) && _configurations.TryRemove(oldFileName, out var oldConfig))
             {
                 _proxyService.RemoveProxy(oldConfig.DnsUrl);
             }
 
-            // Cargar la nueva configuración
+            // Load the new configuration
             LoadConfiguration(e.FullPath);
         }
 
         private void LoadConfigurations()
         {
             var jsonFiles = Directory.GetFiles(_configurationPath, "*.json");
-            _logger.LogInformation($"Cargando {jsonFiles.Length} archivos de configuración");
+            Log.Info($"Loading {jsonFiles.Length} configuration files");
 
             foreach (var file in jsonFiles)
             {
@@ -166,15 +161,15 @@ namespace Reversify.Services
 
                 if (config != null)
                 {
-                    // Usar el ID del config como clave (debe coincidir con el nombre del archivo)
+                    // Use the config ID as the key (should match the file name)
                     _configurations.AddOrUpdate(config.Id, config, (key, old) => config);
 
-                    // Solo actualizar el servicio de proxy si está activa
+                    // Only update proxy service if enabled
                     if (config.Enabled)
                     {
                         _proxyService.AddOrUpdateProxy(config);
 
-                        // Cargar certificado si está configurado un directorio
+                        // Load certificate if a directory is configured
                         if (!string.IsNullOrEmpty(config.CertificatesDirectory))
                         {
                             _httpsService.AddOrUpdateCertificateFromDirectory(
@@ -182,24 +177,24 @@ namespace Reversify.Services
                                 config.CertificatesDirectory,
                                 config.CertificatePassword);
 
-                            // Configurar FileSystemWatcher para el directorio de certificados
+                            // Configure FileSystemWatcher for certificate directory
                             SetupCertificateWatcher(config);
                         }
 
-                        _logger.LogInformation($"Configuración cargada y activada: {config.Name} ({config.DnsUrl} -> {config.LocalUrl})");
+                        Log.Info($"Configuration loaded and activated: {config.Name} ({config.DnsUrl} -> {config.LocalUrl})");
                     }
                     else
                     {
-                        // Si está desactivada, asegurar que no esté en el proxy
+                        // If disabled, ensure it is not in the proxy
                         _proxyService.RemoveProxy(config.DnsUrl);
                         _httpsService.RemoveCertificate(config.DnsUrl);
-                        _logger.LogInformation($"Configuración cargada (inactiva): {config.Name}");
+                        Log.Info($"Configuration loaded (inactive): {config.Name}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al cargar configuración desde {filePath}");
+                Log.Error($"Error loading configuration from {filePath}: {ex.Message}");
             }
         }
 
@@ -218,7 +213,7 @@ namespace Reversify.Services
         {
             try
             {
-                // Deshabilitar temporalmente el FileSystemWatcher para evitar evento duplicado
+                // Temporarily disable FileSystemWatcher to avoid duplicate events
                 if (_fileWatcher != null)
                 {
                     _fileWatcher.EnableRaisingEvents = false;
@@ -234,25 +229,25 @@ namespace Reversify.Services
 
                 await File.WriteAllTextAsync(filePath, json);
 
-                // Actualizar siempre en memoria (independiente de si está habilitada o no)
+                // Always update in memory (regardless of enabled status)
                 _configurations.AddOrUpdate(config.Id, config, (key, old) => config);
 
-                // Solo actualizar el servicio de proxy según el estado
+                // Update proxy service based on status
                 if (config.Enabled)
                 {
                     _proxyService.AddOrUpdateProxy(config);
-                    _logger.LogInformation($"Configuración guardada y aplicada: {config.Name} ({config.DnsUrl} -> {config.LocalUrl})");
+                    Log.Info($"Configuration saved and applied: {config.Name} ({config.DnsUrl} -> {config.LocalUrl})");
                 }
                 else
                 {
                     _proxyService.RemoveProxy(config.DnsUrl);
-                    _logger.LogInformation($"Configuración guardada como deshabilitada: {config.Name}");
+                    Log.Info($"Configuration saved as disabled: {config.Name}");
                 }
 
-                // Reactivar el FileSystemWatcher después de un pequeño delay
+                // Re-enable FileSystemWatcher after a short delay
                 if (_fileWatcher != null)
                 {
-                    await Task.Delay(500); // Esperar 500ms para que el archivo termine de escribirse
+                    await Task.Delay(500);
                     _fileWatcher.EnableRaisingEvents = true;
                 }
 
@@ -260,9 +255,9 @@ namespace Reversify.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al guardar configuración {config.Name}");
+                Log.Error($"Error saving configuration {config.Name}: {ex.Message}");
 
-                // Asegurar que el FileSystemWatcher se reactive
+                // Ensure FileSystemWatcher is re-enabled
                 if (_fileWatcher != null)
                 {
                     _fileWatcher.EnableRaisingEvents = true;
@@ -276,29 +271,26 @@ namespace Reversify.Services
         {
             try
             {
-                _logger.LogInformation($"Intentando eliminar configuración: {id}");
-                
-                // Deshabilitar temporalmente el FileSystemWatcher
+                Log.Info($"Attempting to delete configuration: {id}");
+
+                // Temporarily disable FileSystemWatcher
                 if (_fileWatcher != null)
                 {
                     _fileWatcher.EnableRaisingEvents = false;
-                    _logger.LogInformation("FileSystemWatcher deshabilitado");
                 }
 
-                // Obtener la configuración antes de eliminarla
+                // Get configuration before deleting
                 var config = _configurations.Values.FirstOrDefault(c => c.Id == id);
 
-                // Intentar primero con el nombre basado en el ID
+                // Try first with the ID-based file name
                 var fileName = $"{id}.json";
                 var filePath = Path.Combine(_configurationPath, fileName);
-                
-                _logger.LogInformation($"Buscando archivo: {filePath}");
-                
-                // Si no existe, buscar en todos los archivos JSON
+
+                // If not found, search all JSON files
                 if (!File.Exists(filePath))
                 {
-                    _logger.LogWarning($"Archivo no encontrado con nombre {fileName}, buscando por ID en todos los archivos...");
-                    
+                    Log.Warn($"File not found with name {fileName}, searching by ID in all files...");
+
                     var allFiles = Directory.GetFiles(_configurationPath, "*.json");
                     foreach (var file in allFiles)
                     {
@@ -309,81 +301,75 @@ namespace Reversify.Services
                             if (tempConfig?.Id == id)
                             {
                                 filePath = file;
-                                _logger.LogInformation($"Archivo encontrado: {filePath}");
                                 break;
                             }
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning(ex, $"Error al leer archivo {file}");
+                            Log.Warn($"Error reading file {file}: {ex.Message}");
                         }
                     }
                 }
-                
-                _logger.LogInformation($"Ruta del archivo a eliminar: {filePath}");
-                _logger.LogInformation($"¿Archivo existe?: {File.Exists(filePath)}");
 
                 if (File.Exists(filePath))
                 {
                     try
                     {
                         File.Delete(filePath);
-                        _logger.LogInformation($"Archivo eliminado: {filePath}");
                     }
                     catch (IOException ioEx)
                     {
-                        _logger.LogError(ioEx, $"Error de IO al eliminar archivo: {filePath}");
-                        throw new Exception($"El archivo está en uso o bloqueado: {ioEx.Message}", ioEx);
+                        Log.Error($"IO error deleting file: {filePath}. {ioEx.Message}");
+                        throw new Exception($"File is in use or locked: {ioEx.Message}", ioEx);
                     }
                     catch (UnauthorizedAccessException uaEx)
                     {
-                        _logger.LogError(uaEx, $"Sin permisos para eliminar: {filePath}");
-                        throw new Exception($"Sin permisos para eliminar el archivo: {uaEx.Message}", uaEx);
+                        Log.Error($"No permission to delete file: {filePath}. {uaEx.Message}");
+                        throw new Exception($"No permission to delete file: {uaEx.Message}", uaEx);
                     }
 
-                    // Remover de memoria inmediatamente
+                    // Remove from memory immediately
                     if (config != null)
                     {
                         _configurations.TryRemove(id, out _);
                         _proxyService.RemoveProxy(config.DnsUrl);
-                        _logger.LogInformation($"Configuración eliminada de memoria: {config.Name} ({id})");
+                        Log.Info($"Configuration deleted: {config.Name} ({id})");
                     }
                     else
                     {
-                        _logger.LogInformation($"Configuración eliminada: {id}");
+                        Log.Info($"Configuration deleted: {id}");
                     }
 
-                    // Reactivar el FileSystemWatcher
+                    // Re-enable FileSystemWatcher
                     if (_fileWatcher != null)
                     {
                         await Task.Delay(500);
                         _fileWatcher.EnableRaisingEvents = true;
-                        _logger.LogInformation("FileSystemWatcher reactivado");
                     }
 
                     return true;
                 }
 
-                // Reactivar el FileSystemWatcher si no se encontró el archivo
+                // Re-enable FileSystemWatcher if file not found
                 if (_fileWatcher != null)
                 {
                     _fileWatcher.EnableRaisingEvents = true;
                 }
 
-                _logger.LogWarning($"Archivo no encontrado para configuración: {id}");
-                throw new Exception($"No se encontró el archivo de configuración para el ID: {id}");
+                Log.Warn($"File not found for configuration: {id}");
+                throw new Exception($"Configuration file not found for ID: {id}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al eliminar configuración {id}");
+                Log.Error($"Error deleting configuration {id}: {ex.Message}");
 
-                // Asegurar que el FileSystemWatcher se reactive
+                // Ensure FileSystemWatcher is re-enabled
                 if (_fileWatcher != null)
                 {
                     _fileWatcher.EnableRaisingEvents = true;
                 }
 
-                throw; // Re-lanzar la excepción para que el controlador la maneje
+                throw;
             }
         }
 
@@ -392,7 +378,7 @@ namespace Reversify.Services
             if (string.IsNullOrEmpty(config.CertificatesDirectory) || !Directory.Exists(config.CertificatesDirectory))
                 return;
 
-            // Si ya existe un watcher para este directorio, no crear otro
+            // If a watcher already exists for this directory, do not create another
             if (_certificateWatchers.ContainsKey(config.CertificatesDirectory))
                 return;
 
@@ -404,37 +390,37 @@ namespace Reversify.Services
                     EnableRaisingEvents = true
                 };
 
-                // Configurar filtros para archivos de certificados
+                // Watch all certificate files
                 watcher.Filter = "*.*";
 
-                // Eventos
+                // Events
                 watcher.Changed += (s, e) => OnCertificateFileChanged(e, config);
                 watcher.Created += (s, e) => OnCertificateFileChanged(e, config);
                 watcher.Deleted += (s, e) => OnCertificateFileChanged(e, config);
 
                 _certificateWatchers[config.CertificatesDirectory] = watcher;
 
-                _logger.LogInformation($"👁️  Vigilando cambios en certificados: {config.CertificatesDirectory}");
+                Log.Info($"Watching certificate changes: {config.CertificatesDirectory}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al configurar watcher para certificados: {config.CertificatesDirectory}");
+                Log.Error($"Error configuring watcher for certificates: {config.CertificatesDirectory}. {ex.Message}");
             }
         }
 
         private void OnCertificateFileChanged(FileSystemEventArgs e, ProxyConfig config)
         {
-            // Solo reaccionar a archivos de certificados
+            // Only react to certificate files
             var extension = Path.GetExtension(e.Name ?? "").ToLowerInvariant();
             if (extension != ".crt" && extension != ".key" && extension != ".pfx" && extension != ".p12")
                 return;
 
-            _logger.LogInformation($"🔄 Certificado modificado: {e.Name} ({e.ChangeType})");
+            Log.Info($"Certificate changed: {e.Name} ({e.ChangeType})");
 
-            // Pequeño delay para asegurar que el archivo está completamente escrito
+            // Small delay to ensure the file is fully written
             Task.Delay(500).ContinueWith(_ =>
             {
-                _logger.LogInformation($"🔄 Recargando certificado para: {config.DnsUrl}");
+                Log.Info($"Reloading certificate for: {config.DnsUrl}");
 
                 _httpsService.AddOrUpdateCertificateFromDirectory(
                     config.DnsUrl,

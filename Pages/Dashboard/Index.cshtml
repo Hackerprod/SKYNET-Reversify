@@ -1,0 +1,73 @@
+﻿@page
+@model Reversify.Pages.Dashboard.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="bg-animated" id="bgAnimated"></div>
+
+<section class="min-h-screen pt-24 px-4 pb-12">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="font-space text-4xl md:text-5xl font-bold mb-2">
+                    <i class="fas fa-tachometer-alt mr-3 text-cyan-400"></i>
+                    <span class="gradient-text">Dashboard</span>
+                </h1>
+                <p class="text-gray-400">Bienvenido, @Model.DisplayName</p>
+            </div>
+            <form method="post" asp-page-handler="Logout">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white font-medium transition-all">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Salir
+                </button>
+            </form>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="glass-strong p-6 rounded-2xl glow">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <span class="text-gray-400 text-sm">Proxies</span>
+                </div>
+                <div class="text-3xl font-bold gradient-text mb-1">-</div>
+                <div class="text-gray-400 text-sm">Totales</div>
+            </div>
+
+            <div class="glass-strong p-6 rounded-2xl glow">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-check-circle text-white text-xl"></i>
+                    </div>
+                    <span class="text-gray-400 text-sm">Estado</span>
+                </div>
+                <div class="text-3xl font-bold text-green-400 mb-1">-</div>
+                <div class="text-gray-400 text-sm">Activos</div>
+            </div>
+
+            <div class="glass-strong p-6 rounded-2xl glow">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-indigo-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-lock text-white text-xl"></i>
+                    </div>
+                    <span class="text-gray-400 text-sm">TLS</span>
+                </div>
+                <div class="text-3xl font-bold text-purple-400 mb-1">-</div>
+                <div class="text-gray-400 text-sm">Con certificado</div>
+            </div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6">
+            <h2 class="font-space text-2xl font-bold flex items-center mb-4">
+                <i class="fas fa-info-circle mr-3 text-cyan-400"></i>
+                Estado general
+            </h2>
+            <p class="text-gray-300">
+                Este dashboard es una vista inicial. Puedes extenderlo para mostrar estadísticas en tiempo real,
+                salud de backends y eventos de seguridad.
+            </p>
+        </div>
+    </div>
+</section>

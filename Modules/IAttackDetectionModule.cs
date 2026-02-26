@@ -1,9 +1,9 @@
-using Reversify.Models;
+﻿using Reversify.Models;
 
 namespace Reversify.Modules
 {
     /// <summary>
-    /// Interfaz base para módulos de detección de ataques
+    /// Base interface for attack detection modules
     /// </summary>
     public interface IAttackDetectionModule
     {

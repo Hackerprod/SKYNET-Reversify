@@ -35,6 +35,7 @@ packages/
 .mcp.json
 .claude/
 appsettings.*.local.json
+appsettings.local.json
 *.secrets.json
 secrets.json
 .git
@@ -60,7 +61,6 @@ Configurations/*.json
 # SOME
 AGENTS.md
 *.cmd
-
 
 
 

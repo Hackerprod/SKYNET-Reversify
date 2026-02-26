@@ -1,35 +1,32 @@
-using Reversify.Services;
+﻿using Reversify.Services;
 using System.Net;
 
 namespace Reversify.Middleware
 {
     /// <summary>
-    /// Middleware personalizado de proxy inverso
+    /// Custom reverse proxy middleware
     /// </summary>
     public class ReverseProxyMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly ILogger<ReverseProxyMiddleware> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
 
         public ReverseProxyMiddleware(
             RequestDelegate next,
-            ILogger<ReverseProxyMiddleware> logger,
             IHttpClientFactory httpClientFactory)
         {
             _next = next;
-            _logger = logger;
             _httpClientFactory = httpClientFactory;
         }
 
         public async Task InvokeAsync(HttpContext context, IProxyService proxyService)
         {
             var host = context.Request.Host.Host;
+            var path = context.Request.Path;
             var fullUrl = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.Path}{context.Request.QueryString}";
-            var rawTarget = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpRequestFeature>()?.RawTarget ?? string.Empty;
             var proxyConfig = proxyService.GetProxyByHost(host);
 
-            // Guard: evitar servir contenido local cuando el host no está configurado
+            // Guard: avoid serving local content when the host is not configured
             if (proxyConfig == null || !proxyConfig.Enabled)
             {
                 var isLocalHost = string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
@@ -37,53 +34,32 @@ namespace Reversify.Middleware
                                   || string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
                 if (!isLocalHost)
                 {
-                    _logger.LogWarning($"Host no configurado para proxy: {host}. 404 para evitar servir contenido local.");
+                    Log.Warn($"Host not configured for proxy: {host}. Returning 404 to avoid serving local content.");
                     context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     await context.Response.WriteAsync("404 - Host no configurado en el proxy inverso");
                     return;
                 }
             }
 
-            // Si no hay configuración de proxy para este host, continuar con la siguiente middleware
+            // If there is no proxy config for this host, continue to the next middleware
             if (proxyConfig == null || !proxyConfig.Enabled)
             {
-                _logger.LogInformation($"📄 [LOCAL] {context.Request.Method} {fullUrl} -> Procesando localmente");
                 await _next(context);
                 return;
             }
 
-            // HAY PROXY CONFIGURADO - Redirigir la petición
+            // Proxy is configured - forward the request
             var targetUrl = $"{proxyConfig.LocalUrl}{context.Request.Path}{context.Request.QueryString}";
-
-            // Diagnóstico adicional de HTTPS y encabezados a enviar al backend
-            {
-                var schemeLabel = context.Request.IsHttps ? "HTTPS" : "HTTP";
-                _logger.LogInformation($"Diagnóstico: scheme={schemeLabel} IsHttps={context.Request.IsHttps}");
-                var detectedProto = context.Request.IsHttps ? "https" : "http";
-                var detectedPort = context.Request.Host.Port ?? (context.Request.IsHttps ? 443 : 80);
-                _logger.LogInformation($"Diagnóstico: Forwarded preview proto={detectedProto}; host={host}; port={detectedPort}");
-            }
-
-            _logger.LogInformation($"");
-            _logger.LogInformation($"{'═',60}");
-            _logger.LogInformation($"🔀 SOLICITUD DE PROXY");
-            _logger.LogInformation($"{'─',60}");
-            _logger.LogInformation($"  📥 Origen:  {context.Request.Method} {fullUrl}");
-            _logger.LogInformation($"  📤 Destino: {targetUrl}");
-            _logger.LogInformation($"  🌐 Host:    {host}");
-            _logger.LogInformation($"  🔗 Config:  {proxyConfig.Name}");
-            _logger.LogInformation($"{'═',60}");
-            _logger.LogInformation($"");
 
             try
             {
                 await ProxyRequestAsync(context, proxyConfig.LocalUrl);
 
-                _logger.LogInformation($"✅ [PROXY] Completado: {context.Request.Method} {fullUrl} -> {context.Response.StatusCode}");
+                Log.Info($"[PROXY] {context.Request.Method} {fullUrl} -> {targetUrl} ({context.Response.StatusCode})");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"❌ [PROXY] Error: {context.Request.Method} {fullUrl}");
+                Log.Error($"[PROXY] Error: {context.Request.Method} {fullUrl}. {ex.Message}");
                 context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
                 await context.Response.WriteAsync("502 Bad Gateway - Error al conectar con el servidor de destino");
             }
@@ -91,28 +67,26 @@ namespace Reversify.Middleware
 
         private async Task ProxyRequestAsync(HttpContext context, string targetUrl)
         {
-            // Construir la URL de destino
+            // Build target URL
             var targetUri = new Uri(new Uri(targetUrl), context.Request.Path + context.Request.QueryString);
 
-            _logger.LogDebug($"   → Destino completo: {targetUri}");
-
-            // Crear la petición HTTP
+            // Create HTTP request
             var httpClient = _httpClientFactory.CreateClient("ProxyClient");
             var requestMessage = new HttpRequestMessage();
             var method = context.Request.Method;
 
-            // Establecer el método HTTP
+            // Set HTTP method
             requestMessage.Method = new HttpMethod(method);
             requestMessage.RequestUri = targetUri;
 
-            // Copiar headers (excepto los que no se deben reenviar ni los de contenido)
+            // Copy headers (except those that should not be forwarded or content headers)
             foreach (var header in context.Request.Headers)
             {
                 if (!ShouldSkipHeader(header.Key))
                 {
                     if (header.Key.Equals("Host", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Usar el host del destino
+                        // Use target host
                         requestMessage.Headers.TryAddWithoutValidation(header.Key, new Uri(targetUrl).Host);
                     }
                     else if (!header.Key.StartsWith("Content-", StringComparison.OrdinalIgnoreCase))
@@ -132,11 +106,11 @@ namespace Reversify.Middleware
             requestMessage.Headers.TryAddWithoutValidation("X-Forwarded-Host", originalHost);
             requestMessage.Headers.TryAddWithoutValidation("X-Forwarded-Proto", originalProto);
             requestMessage.Headers.TryAddWithoutValidation("X-Forwarded-Port", originalPort.ToString());
-            // RFC 7239 header (algunos backends lo prefieren)
+            // RFC 7239 header (some backends prefer it)
             requestMessage.Headers.TryAddWithoutValidation("Forwarded", $"for={clientIp};proto={originalProto};host={originalHost}");
 
-            // Copiar el body si existe
-            // Cuerpo y headers de contenido: reenviar de forma laxa para evitar errores de formato
+            // Copy body if present
+            // Content body and headers: forward loosely to avoid formatting errors
             var methodHasBody = string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase)
                                 || string.Equals(context.Request.Method, "PUT", StringComparison.OrdinalIgnoreCase)
                                 || string.Equals(context.Request.Method, "PATCH", StringComparison.OrdinalIgnoreCase)
@@ -146,12 +120,12 @@ namespace Reversify.Middleware
             {
                 var streamContent = new StreamContent(context.Request.Body);
 
-                // Copiar todos los headers de contenido como están (sin validación estricta)
+                // Copy all content headers as-is (no strict validation)
                 foreach (var header in context.Request.Headers)
                 {
                     if (header.Key.StartsWith("Content-", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Evitar Content-Length: lo gestiona HttpClient/StreamContent
+                        // Avoid Content-Length: handled by HttpClient/StreamContent
                         if (header.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
                             continue;
                         streamContent.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
@@ -160,15 +134,13 @@ namespace Reversify.Middleware
                 requestMessage.Content = streamContent;
             }
 
-            // Enviar la petición al servidor de destino
+            // Send request to target server
             var responseMessage = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
 
-            _logger.LogDebug($"   ← Respuesta: {(int)responseMessage.StatusCode} {responseMessage.ReasonPhrase}");
-
-            // Copiar el status code
+            // Copy status code
             context.Response.StatusCode = (int)responseMessage.StatusCode;
 
-            // Copiar headers de respuesta (excepto los que no se deben reenviar)
+            // Copy response headers (except those that should not be forwarded)
             foreach (var header in responseMessage.Headers)
             {
                 if (!ShouldSkipResponseHeader(header.Key))
@@ -185,28 +157,28 @@ namespace Reversify.Middleware
                 }
             }
 
-            // Ajustes para SSE (Server-Sent Events)
+            // Adjustments for SSE (Server-Sent Events)
             var contentType = responseMessage.Content.Headers.ContentType?.MediaType;
             var isSse = !string.IsNullOrEmpty(contentType) &&
                         contentType.Equals("text/event-stream", StringComparison.OrdinalIgnoreCase);
             if (isSse)
             {
-                // Asegurar cabeceras que evitan buffering
+                // Ensure headers that avoid buffering
                 if (!context.Response.Headers.ContainsKey("Cache-Control"))
                 {
                     context.Response.Headers["Cache-Control"] = "no-cache";
                 }
-                // Desactivar buffering en proxies intermedios comunes
+                // Disable buffering in common intermediate proxies
                 context.Response.Headers["X-Accel-Buffering"] = "no";
             }
 
-            // Copiar el body de la respuesta
+            // Copy response body
             await responseMessage.Content.CopyToAsync(context.Response.Body);
         }
 
         private bool ShouldSkipHeader(string headerName)
         {
-            // Headers que no se deben reenviar
+            // Headers that should not be forwarded
             var skipHeaders = new[]
             {
                 "Connection",
@@ -220,7 +192,7 @@ namespace Reversify.Middleware
 
         private bool ShouldSkipResponseHeader(string headerName)
         {
-            // Headers de respuesta que no se deben reenviar
+            // Response headers that should not be forwarded
             var skipHeaders = new[]
             {
                 "Transfer-Encoding",
@@ -234,7 +206,7 @@ namespace Reversify.Middleware
     }
 
     /// <summary>
-    /// Extensión para agregar el middleware de proxy
+    /// Extension to add the proxy middleware
     /// </summary>
     public static class ReverseProxyMiddlewareExtensions
     {
@@ -244,9 +216,3 @@ namespace Reversify.Middleware
         }
     }
 }
-
-
-
-
-
-

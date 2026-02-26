@@ -2,9 +2,11 @@
 using Reversify.Services;
 using Reversify.Middleware;
 using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -15,7 +17,18 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.WriteIndented = true;
     });
 
-// Registrar HttpClient para el proxy
+// Auth (cookie) for simple dashboard access
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/";
+        options.AccessDeniedPath = "/";
+        options.SlidingExpiration = true;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    });
+builder.Services.AddAuthorization();
+
+// Register HttpClient for the proxy
 builder.Services.AddHttpClient("ProxyClient")
     .ConfigureHttpClient(c => { c.Timeout = System.Threading.Timeout.InfiniteTimeSpan; })
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -25,20 +38,20 @@ builder.Services.AddHttpClient("ProxyClient")
         AutomaticDecompression = System.Net.DecompressionMethods.None
     });
 
-// Registrar servicios de proxy
+// Register proxy services
 builder.Services.AddSingleton<IProxyService, ProxyService>();
 builder.Services.AddSingleton<HttpsConfigurationService>();
 builder.Services.AddHostedService<ProxyConfigurationService>();
 builder.Services.AddSingleton<ProxyConfigurationService>(sp =>
     sp.GetServices<IHostedService>().OfType<ProxyConfigurationService>().First());
 
-// Registrar módulos de detección de ataques
+// Register attack detection modules
 builder.Services.AddSingleton<IAttackDetectionModule, DDoSDetectionModule>();
 
-// Variable compartida para acceder al HttpsConfigurationService desde el callback de SNI
+// Shared variable to access HttpsConfigurationService from the SNI callback
 HttpsConfigurationService? globalHttpsService = null;
 
-// Configurar Kestrel ANTES de Build()
+// Configure Kestrel BEFORE Build()
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.ListenAnyIP(80); // HTTP
@@ -47,21 +60,21 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     {
         listenOptions.UseHttps(httpsOptions =>
         {
-            // Usar SNI (Server Name Indication) para seleccionar certificado por host
+            // Use SNI (Server Name Indication) to select certificate per host
             httpsOptions.ServerCertificateSelector = (connectionContext, name) =>
             {
-                // El servicio ya debe estar inicializado en globalHttpsService
-                // después de app.Build()
+                // Service should already be initialized in globalHttpsService
+                // after app.Build()
 
                 if (string.IsNullOrEmpty(name))
                 {
-                    Console.WriteLine("⚠️  SNI: Sin hostname proporcionado");
+                    Log.Warn("SNI: no hostname provided");
                     return null;
                 }
 
                 if (globalHttpsService == null)
                 {
-                    Console.WriteLine($"⚠️  SNI: HttpsConfigurationService no disponible todavía para '{name}'");
+                    Log.Warn($"SNI: HttpsConfigurationService not available yet for '{name}'");
                     return null;
                 }
 
@@ -69,17 +82,17 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 
                 if (cert == null)
                 {
-                    Console.WriteLine($"❌ SNI: No se encontró certificado para '{name}'");
+                    Log.Warn($"SNI: no certificate found for '{name}'");
 
-                    // Listar hosts disponibles
+                    // List available hosts
                     var availableHosts = globalHttpsService.GetConfiguredHosts();
                     if (availableHosts.Any())
                     {
-                        Console.WriteLine($"   Hosts disponibles: {string.Join(", ", availableHosts)}");
+                        Log.Info($"Available hosts: {string.Join(", ", availableHosts)}");
                     }
                     else
                     {
-                        Console.WriteLine($"   No hay certificados cargados todavía");
+                        Log.Info("No certificates loaded yet");
                     }
                 }
 
@@ -91,9 +104,9 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 
 var app = builder.Build();
 
-// Obtener el servicio HTTPS después del build
+// Get HTTPS service after build
 globalHttpsService = app.Services.GetRequiredService<HttpsConfigurationService>();
-Console.WriteLine("✅ HttpsConfigurationService inicializado");
+Log.Info("HttpsConfigurationService initialized");
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -102,27 +115,28 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Redirigir HTTP -> HTTPS en el edge para evitar contenido mixto
+// Redirect HTTP -> HTTPS at the edge to avoid mixed content
 app.UseHttpsRedirection();
 
-// Ejecutar el proxy inverso antes de archivos estáticos/rutas locales
+// Run reverse proxy before static files/local routes
 app.UseReverseProxy();
 
 app.UseStaticFiles();
 app.UseRouting();
 
-// Middleware de detección de ataques (TEMPORALMENTE DESHABILITADO)
+// Attack detection middleware (TEMPORARILY DISABLED)
 // app.UseAttackDetection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
-// ✨ MIDDLEWARE DE PROXY INVERSO PERSONALIZADO ✨
-// Este middleware intercepta peticiones basándose en el Host header
-// y las redirige al servidor local configurado
+// Custom reverse proxy middleware
+// This middleware intercepts requests based on the Host header
+// and forwards them to the configured local server
 
-// Razor Pages y Controllers (solo se ejecutan si el proxy no interceptó)
+// Razor Pages and Controllers (only run if the proxy did not intercept)
 app.MapRazorPages();
 app.MapControllers();
 
-Console.WriteLine("🚀 Iniciando servidor...");
+Log.Info("Starting server...");
 app.Run();
